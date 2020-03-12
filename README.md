@@ -272,11 +272,11 @@ Set a `bash` alias for the address:
 ❯❯❯ WHITELISTED_FA12="KT1BddbuJHr85iomhaoxxwEEy2o38TdZ1rQS"
 ```
 
-
-
-
 As mentioned before, the polymorhic `Whitelist` part is used for all but
-printing the `WhitelistManagedLedger` contract.
+printing and initializing the `WhitelistManagedLedger` contract.
+
+
+
 
 ```bash
 ❯❯❯ alpha-client --wait none transfer 0 from $ALICE_ADDRESS to $ORACLE_ADDRESS \

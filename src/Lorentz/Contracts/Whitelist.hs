@@ -151,6 +151,12 @@ mapUsers f = BigMap . Map.mapKeys f . unBigMap
 mkUsers :: Ord a => [(a, Natural)] -> Users a
 mkUsers = BigMap . Map.fromList
 
+-- | Outbound permissions on a whitelist.
+--
+-- If `unrestricted` is `False`, no transfers from the whitelist are allowed.
+--
+-- Otherwise, members of the whitelist may only transfer to a whitelist
+-- in their `allowedWhitelists`.
 data OutboundWhitelists = OutboundWhitelists
   { unrestricted        :: !Bool
   , allowedWhitelists :: !(Set WhitelistId)
@@ -163,6 +169,7 @@ data OutboundWhitelists = OutboundWhitelists
 unOutboundWhitelists :: OutboundWhitelists & s :-> (Bool, Set WhitelistId) & s
 unOutboundWhitelists = coerce_
 
+-- | An assignment from `WhitelistId` to outbound permissions.
 type Whitelists = BigMap WhitelistId OutboundWhitelists
 
 mkOutboundWhitelists :: Bool -> [Natural] -> OutboundWhitelists
@@ -283,9 +290,16 @@ callAssertTransfer = do
     push (toEnum 0 :: Mutez)
   transferTokens
 
--- | Assert that one user is allowed to transfer to the other
--- assertTransfer :: forall a. (IsComparable a, CompareOpHs a, Typeable a) => Entrypoint (TransferParams a) (Storage a)
-assertTransfer :: forall a s. (IsComparable a, CompareOpHs a, Typeable a) => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
+-- | Assert that one user is allowed to transfer to the other.
+--
+-- The `issuer` is allowed to transfer to anyone.
+--
+-- If the sender's `WhitelistId`'s `OutboundWhitelists` is `unrestricted`,
+-- they may transfer to any receiver whose `WhitelistId` is in their
+-- `allowedWhitelists`.
+assertTransfer ::
+     forall a s. (IsComparable a, CompareOpHs a, Typeable a)
+  => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
 assertTransfer = do
   dip $ do
     dup

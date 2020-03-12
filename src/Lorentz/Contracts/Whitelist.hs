@@ -152,7 +152,7 @@ mkUsers :: Ord a => [(a, Natural)] -> Users a
 mkUsers = BigMap . Map.fromList
 
 data OutboundWhitelists = OutboundWhitelists
-  { restricted        :: !Bool
+  { unrestricted        :: !Bool
   , allowedWhitelists :: !(Set WhitelistId)
   }
   deriving  (Generic)
@@ -166,8 +166,8 @@ unOutboundWhitelists = coerce_
 type Whitelists = BigMap WhitelistId OutboundWhitelists
 
 mkOutboundWhitelists :: Bool -> [Natural] -> OutboundWhitelists
-mkOutboundWhitelists restricted' =
-  OutboundWhitelists restricted' .
+mkOutboundWhitelists unrestricted' =
+  OutboundWhitelists unrestricted' .
   Set.fromList
 
 mkWhitelists :: [(Natural, (Bool, [Natural]))] -> Whitelists
@@ -247,7 +247,7 @@ assertOutboundWhitelists = do
   outboundWhitelists
   assertSome $ mkMTextUnsafe "Whitelist does not exist"
 
--- | Assert that `OutboundWhitelists` `restricted` is `False`
+-- | Assert that `OutboundWhitelists` `unrestricted` is `True`
 assertUnrestrictedOutboundWhitelists :: OutboundWhitelists & s :-> Set WhitelistId & s
 assertUnrestrictedOutboundWhitelists = do
   unOutboundWhitelists

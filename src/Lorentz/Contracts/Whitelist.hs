@@ -32,8 +32,11 @@ assertAdmin = do
   dup
   dip assertAdmin_
 
+-- | A transfer between users
 data TransferParams a = TransferParams
-  { from :: !a
+  { -- | The user sending "tokens"
+    from :: !a
+    -- | The user receiving "tokens"
   , to   :: !a
   }
   deriving  (Generic)
@@ -45,14 +48,19 @@ deriving instance Show a => Show (TransferParams a)
 
 deriving instance IsoValue a => IsoValue (TransferParams a)
 
+-- | Wrap `TransferParams`
 toTransferParams :: (a, a) & s :-> TransferParams a & s
 toTransferParams = coerce_
 
+-- | Unwrap `TransferParams`
 unTransferParams :: TransferParams a & s :-> (a, a) & s
 unTransferParams = coerce_
 
+-- | Set the `OutboundWhitelists` for a particular `WhitelistId` (only admin)
 data WhitelistOutboundParams = WhitelistOutboundParams
-  { whitelist             :: !WhitelistId
+  { -- | The `WhitelistId` to update the `OutboundWhitelists` for
+    whitelist             :: !WhitelistId
+    -- | The new `OutboundWhitelists` or `Nothing` to delete the whitelist
   , newOutboundWhitelists :: !(Maybe OutboundWhitelists)
   }
   deriving  (Generic)
@@ -60,37 +68,55 @@ data WhitelistOutboundParams = WhitelistOutboundParams
   deriving  (Show)
   deriving  (IsoValue)
 
+-- | Unwrap `WhitelistOutboundParams`
 unWhitelistOutboundParams :: WhitelistOutboundParams & s :-> WhitelistId & Maybe OutboundWhitelists & s
 unWhitelistOutboundParams = do
   coerce_
   unpair
 
-data NewUserParams a = NewUserParams
-  { newUser          :: !a
-  , newUserWhitelist :: !(Maybe WhitelistId)
+-- | Update/insert a user's `WhitelistId` or remove them from the `Whitelists`
+data UpdateUserParams a = UpdateUserParams
+  { -- | The user to update
+    user          :: !a
+    -- | The new `WhitelistId` for the user,
+    -- or `Nothing` to delete the user from the `Whitelists`
+  , updateUserWhitelist :: !(Maybe WhitelistId)
   }
   deriving  (Generic)
   deriving  (Generic1)
 
-unNewUserParams :: NewUserParams a & s :-> a & Maybe WhitelistId & s
-unNewUserParams = do
+-- | Unwrap `UpdateUserParams`
+unUpdateUserParams :: UpdateUserParams a & s :-> a & Maybe WhitelistId & s
+unUpdateUserParams = do
   coerce_
   unpair
 
-deriving instance Read a => Read (NewUserParams a)
+deriving instance Read a => Read (UpdateUserParams a)
 
-deriving instance Show a => Show (NewUserParams a)
+deriving instance Show a => Show (UpdateUserParams a)
 
-deriving instance IsoValue a => IsoValue (NewUserParams a)
+deriving instance IsoValue a => IsoValue (UpdateUserParams a)
 
+-- | Parameters are separated into assertions and management/`View`
+-- parameters (`Parameter'`).
+--
+-- This helps facilitate using the code as different kinds of wrappers
+-- while retaining a static type interface for the management/`View`
+-- parameters.
 data Parameter a
+  -- | Assert that a transfer is valid
   = AssertTransfer
       { transferParams :: !(TransferParams a)
       }
+  -- | Management and `View` parameters
   | OtherParameter
       { otherParams :: !(Parameter' a)
       }
   deriving  (Generic)
+  -- Assert that multiple transfers are valid
+  -- AssertTransfers
+  --     { transfersParams :: ![TransferParams a]
+  --     }
 
 instance NiceParameter a => ParameterEntryPoints (Parameter a) where
   parameterEntryPoints = pepNone
@@ -101,28 +127,43 @@ deriving instance Show a => Show (Parameter a)
 
 deriving instance IsoValue a => IsoValue (Parameter a)
 
+-- | Management and `View` parameters
 data Parameter' a
+  -- | Set a new issuer (only admin)
   = SetIssuer
       { newIssuer :: !a
       }
+  -- | Add a new user,  (only admin)
   | AddUser
-      { newUserParams :: !(NewUserParams a)
+      { newUserParams :: !(UpdateUserParams a)
       }
+  -- | Set the `OutboundWhitelists` for a particular `WhitelistId` (only admin)
+  --
+  -- Note: If you unset the `OutboundWhitelists` for a `WhitelistId`
+  -- that's referenced in `Users`, the reference will remain and
+  -- attempting to lookup the whitelist for any user referencing it
+  -- will fail.
   | SetWhitelistOutbound
       { whitelistOutboundParams :: !WhitelistOutboundParams
       }
+  -- | Set the admin `Address` (only admin)
   | SetAdmin
       { admin :: !Address
       }
+  -- | Get the issuer
   | GetIssuer
       { viewIssuer :: !(View_ a)
       }
+  -- | Get a user's `WhitelistId`, or `Nothing` if the user is not whitelisted
   | GetUser
       { viewUser :: !(View a (Maybe WhitelistId))
       }
+  -- | Get a whitelist's `OutboundWhitelists`,
+  -- or `Nothing` if there's no whitelist with that `WhitelistId`
   | GetWhitelist
       { viewWhitelist :: !(View WhitelistId (Maybe OutboundWhitelists))
       }
+  -- | Get the admin `Address`
   | GetAdmin
       { viewAdmin :: !(View_ Address)
       }
@@ -134,25 +175,49 @@ deriving instance Show a => Show (Parameter' a)
 
 deriving instance IsoValue a => IsoValue (Parameter' a)
 
+-- | Convenience utility for calling `Parameter`
 toAssertTransfer :: forall a s. KnownValue a => TransferParams a & s :-> Parameter a & s
 toAssertTransfer = do
   left @(TransferParams a) @(Parameter' a)
   coerce_
 
+-- | An easy way to call an instance of a `whitelistContract`
+callAssertTransfer :: forall a s. (NiceParameter a) => TransferParams a & Address & s :-> Operation & s
+callAssertTransfer = do
+  toAssertTransfer
+  dip $ do
+    contract @(Parameter a)
+    assertSome $ mkMTextUnsafe "Expected Whitelist Contract"
+    push (toEnum 0 :: Mutez)
+  transferTokens
+
+-- | A parameter-free `View`
 type View_ = View ()
 
 type WhitelistId = Natural
 
+-- | A whitelisted user is associated to exactly one whitelist
 type Users a = BigMap a WhitelistId
 
+-- | `fmap` for `Users` (requires `Ord`)
 mapUsers :: Ord b => (a -> b) -> Users a -> Users b
 mapUsers f = BigMap . Map.mapKeys f . unBigMap
 
-mkUsers :: Ord a => [(a, Natural)] -> Users a
+-- | Construct `Users` from a list of assignments from
+-- users to `WhitelistId`'s.
+--
+-- Note: duplicates will be implicitly removed
+mkUsers :: Ord a => [(a, WhitelistId)] -> Users a
 mkUsers = BigMap . Map.fromList
 
+-- | Outbound permissions on a whitelist.
+--
+-- If `unrestricted` is `False`, no transfers from the whitelist are allowed.
+--
+-- Otherwise, members of the whitelist may only transfer to a whitelist
+-- in their `allowedWhitelists`.
 data OutboundWhitelists = OutboundWhitelists
-  { restricted        :: !Bool
+  { unrestricted        :: !Bool
   , allowedWhitelists :: !(Set WhitelistId)
   }
   deriving  (Generic)
@@ -160,25 +225,42 @@ data OutboundWhitelists = OutboundWhitelists
   deriving  (Show)
   deriving  (IsoValue)
 
+-- | Unwrap `OutboundWhitelists`
 unOutboundWhitelists :: OutboundWhitelists & s :-> (Bool, Set WhitelistId) & s
 unOutboundWhitelists = coerce_
 
+-- | An assignment from `WhitelistId` to outbound permissions.
 type Whitelists = BigMap WhitelistId OutboundWhitelists
 
-mkOutboundWhitelists :: Bool -> [Natural] -> OutboundWhitelists
-mkOutboundWhitelists restricted' =
-  OutboundWhitelists restricted' .
+-- | Construct `OutboundWhitelists` from `unrestricted` and a
+-- list that will be deduplicated into a `Set` of `WhitelistId`'s
+mkOutboundWhitelists :: Bool -> [WhitelistId] -> OutboundWhitelists
+mkOutboundWhitelists unrestricted' =
+  OutboundWhitelists unrestricted' .
   Set.fromList
 
-mkWhitelists :: [(Natural, (Bool, [Natural]))] -> Whitelists
+-- | Construct `Whitelists` from:
+-- @
+--  [(key, (unrestricted, outbound WhitelistId's))]
+-- @
+--
+-- Note: The latest `WhitelistId` will replace all previous occurrences
+mkWhitelists :: [(WhitelistId, (Bool, [WhitelistId]))] -> Whitelists
 mkWhitelists =
   BigMap . fmap (uncurry mkOutboundWhitelists) . Map.fromList
 
+-- | Storage for the `whitelistContract`
 data Storage a =
   Storage
-    { issuer :: !a
+    { -- | The issuer, who may transfer to anyone and may not be a user
+      issuer :: !a
+      -- | Each whitelisted user has exactly one `WhitelistId`
     , users :: !(Users a)
+      -- | Each `WhitelistId` is associated with `OutboundWhitelists`
     , whitelists :: !Whitelists
+      -- | The admin is not distinguished as a user.
+      --
+      -- Entrypoints can update state iff they are admin-only.
     , admin :: !Address
     }
   deriving  (Generic)
@@ -187,6 +269,7 @@ deriving instance Show a => Show (Storage a)
 
 deriving instance (Ord a, IsoValue a, IsoCValue a) => IsoValue (Storage a)
 
+-- | `fmap` for `Storage` (requires `Ord`)
 mapStorage :: Ord b => (a -> b) -> Storage a -> Storage b
 mapStorage f xs@Storage{..} = xs
   { issuer = f issuer
@@ -247,13 +330,26 @@ assertOutboundWhitelists = do
   outboundWhitelists
   assertSome $ mkMTextUnsafe "Whitelist does not exist"
 
--- | Assert that `OutboundWhitelists` `restricted` is `False`
+-- | Assert that `OutboundWhitelists` `unrestricted` is `True`
 assertUnrestrictedOutboundWhitelists :: OutboundWhitelists & s :-> Set WhitelistId & s
 assertUnrestrictedOutboundWhitelists = do
   unOutboundWhitelists
   unpair
   assert $ mkMTextUnsafe "outbound restricted"
 
+-- | A contract that accepts either one or a batch of `TransferParams`
+-- and throws and error if any transfers are disallowed.
+--
+-- Only whitelisted users and the "issuer" may participate in transfers.
+-- - The issuer may transfer to any whitelisted user
+-- - Each whitelisted user is associated to exactly one whitelist, by `WhitelistId`
+-- - Each whitelist has a set of outbound whitelists that it may transfer to
+-- - A whitelist may be restricted, i.e. its set of outbound whitelists is "empty"
+--  * We store both @(`unrestricted` :: `Bool`)@ and
+--    a set of `WhitelistId`'s so that restriction may be easily toggled
+-- - A user may transfer to any other whitelisted user with a whitelist in their whitelist's outbound list
+--
+-- See `Parameter` and `Storage` for more detail.
 whitelistContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a)
   => Contract (Parameter a) (Storage a)
 whitelistContract = do
@@ -273,19 +369,16 @@ whitelistContract = do
           )
     )
 
--- | An easy way to call an instance of a `whitelistContract`
-callAssertTransfer :: forall a s. (NiceParameter a) => TransferParams a & Address & s :-> Operation & s
-callAssertTransfer = do
-  toAssertTransfer
-  dip $ do
-    contract @(Parameter a)
-    assertSome $ mkMTextUnsafe "Expected Whitelist Contract"
-    push (toEnum 0 :: Mutez)
-  transferTokens
-
--- | Assert that one user is allowed to transfer to the other
--- assertTransfer :: forall a. (IsComparable a, CompareOpHs a, Typeable a) => Entrypoint (TransferParams a) (Storage a)
-assertTransfer :: forall a s. (IsComparable a, CompareOpHs a, Typeable a) => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
+-- | Assert that one user is allowed to transfer to the other.
+--
+-- The `issuer` is allowed to transfer to anyone.
+--
+-- If the sender's `WhitelistId`'s `OutboundWhitelists` is `unrestricted`,
+-- they may transfer to any receiver whose `WhitelistId` is in their
+-- `allowedWhitelists`.
+assertTransfer ::
+     forall a s. (IsComparable a, CompareOpHs a, Typeable a)
+  => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
 assertTransfer = do
   dip $ do
     dup
@@ -348,7 +441,7 @@ assertNotIssuer = do
 -- or implicitly remove by providing `Nothing`
 --
 -- Only admin
-addUser :: forall a. (CompareOpHs a, Typeable a) => Entrypoint (NewUserParams a) (Storage a)
+addUser :: forall a. (CompareOpHs a, Typeable a) => Entrypoint (UpdateUserParams a) (Storage a)
 addUser = do
   dip $ do
     unStorage
@@ -359,7 +452,7 @@ addUser = do
         assertAdmin
       pair
     unpair
-  unNewUserParams
+  unUpdateUserParams
   swap
   dip assertNotIssuer
   pair

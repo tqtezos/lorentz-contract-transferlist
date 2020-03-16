@@ -41,6 +41,7 @@ import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
 import Lorentz.Contracts.Whitelist (View_, OutboundWhitelists(..), WhitelistId, WhitelistOutboundParams(..), OutboundWhitelists(..))
 
+-- | TODO: merge upstream into morley
 instance IsoCValue (Value ('Tc ct)) where
   type ToCT (Value ('Tc ct)) = ct
   toCVal (VC xs) = xs
@@ -61,6 +62,7 @@ instance SingI ct => Ord (Value ('Tc ct)) where
 
 instance (Typeable ct, CompareOp ct) => CompareOpHs (Value ('Tc ct)) where
 
+-- | `SingI` implies `CompareOp` forall `CT`
 compareOpCT :: forall ct. SingI ct :- CompareOp ct
 compareOpCT = Sub $
   case sing @ct of
@@ -74,19 +76,21 @@ compareOpCT = Sub $
     SCTimestamp -> Dict
     SCAddress -> Dict
 
+-- | Assert `HasNoOp`
 assertOpAbsense :: forall (t :: T) a. SingI t => (HasNoOp t => a) -> a
 assertOpAbsense f =
   case opAbsense (sing @t) of
     Nothing -> error "assertOpAbsense"
     Just Dict -> forbiddenOp @t f
 
+-- | Assert `HasNoBigMap`
 assertBigMapAbsense :: forall (t :: T) a. SingI t => (HasNoBigMap t => a) -> a
 assertBigMapAbsense f =
   case bigMapAbsense (sing @t) of
     Nothing -> error "assertBigMapAbsense"
     Just Dict -> forbiddenBigMap @t f
 
--- type IsComparable c = ToT c ~ 'Tc (ToCT c)
+-- | Assert `IsComparable`
 assertIsComparable ::
      forall (t :: T) a. SingI t
   => (( IsComparable (Value t)
@@ -100,6 +104,7 @@ assertIsComparable f =
     STc _ -> f
     _ -> error "assertIsComparable"
 
+-- | `Sing` implies `Typeable`
 singTypeableCT :: forall (t :: CT). Sing t -> Dict (Typeable t)
 singTypeableCT SCInt = Dict
 singTypeableCT SCNat = Dict
@@ -111,6 +116,7 @@ singTypeableCT SCKeyHash = Dict
 singTypeableCT SCTimestamp = Dict
 singTypeableCT SCAddress = Dict
 
+-- | `Sing` implies `Typeable`
 singTypeableT :: forall (t :: T). Sing t -> Dict (Typeable t)
 singTypeableT (STc ct) =
   withDict (singTypeableCT ct) $
@@ -153,6 +159,7 @@ singTypeableT (STBigMap st su) =
   withDict (singTypeableT su) $
   Dict
 
+-- | `Sing` implies `SingI`
 singICT :: forall (t :: CT). Sing t -> Dict (SingI t)
 singICT SCInt = Dict
 singICT SCNat = Dict
@@ -164,6 +171,7 @@ singICT SCKeyHash = Dict
 singICT SCTimestamp = Dict
 singICT SCAddress = Dict
 
+-- | `Sing` implies `SingI`
 singIT :: forall (t :: T). Sing t -> Dict (SingI t)
 singIT (STc ct) =
   withDict (singICT ct) $
@@ -206,27 +214,33 @@ singIT (STBigMap st su) =
   withDict (singIT su) $
   Dict
 
+-- | Some `Whitelist.Storage` with a `KnownValue` constraint
 data SomeStorage where
   SomeStorage :: (KnownValue (Value a))
     => Whitelist.Storage (Value a)
     -> SomeStorage
 
+-- | Run `SomeStorage`
 fromSomeStorage :: forall b. SomeStorage -> (forall a. (KnownValue (Value a)) => Whitelist.Storage (Value a) -> b) -> b
 fromSomeStorage (SomeStorage xs) f = f xs
 
+-- | Some contract storage with `SingI` and `HasNoOp` constraints
 data SomeContractStorage where
   SomeContractStorage :: (SingI a, HasNoOp a)
     => Value a
     -> SomeContractStorage
 
+-- | Run `SomeContractStorage`
 fromSomeContractStorage :: forall b. SomeContractStorage -> (forall a. (SingI a, HasNoOp a) => Value a -> b) -> b
 fromSomeContractStorage (SomeContractStorage xs) f = f xs
 
+-- | Some `Whitelist.TransferParams` with a `NicePrintedValue` constraint
 data SomeTransferParams where
   SomeTransferParams :: (NicePrintedValue (Value a))
     => Whitelist.TransferParams (Value a)
     -> SomeTransferParams
 
+-- | Run `SomeTransferParams`
 fromSomeTransferParams ::
      forall b.
      SomeTransferParams
@@ -330,6 +344,7 @@ parseSomeT name =
       , Opt.help $ "The Michelson Type of " ++ name
       ])
 
+-- | Parse `SomeContractParam`, given an argument for the type
 parseSomeContractParam :: String -> Opt.Parser SomeContractParam
 parseSomeContractParam name =
   (\(SomeSing (st :: Sing t)) paramStr ->
@@ -352,9 +367,11 @@ parseSomeContractParam name =
       , Opt.help $ "The Michelson Value: " ++ name
       ])
 
+-- | Parse and return `Just` or `Nothing` if it fails
 parseMaybe :: Alternative f => f a -> f (Maybe a)
 parseMaybe p = fmap Just p <|> pure Nothing
 
+-- | Parse `SomeContractStorage`, see `parseSomeContractParam`
 parseSomeContractStorage :: String -> Opt.Parser SomeContractStorage
 parseSomeContractStorage name =
   (\(SomeSing (st :: Sing t)) paramStr ->
@@ -377,6 +394,7 @@ parseSomeContractStorage name =
       , Opt.help $ "The Michelson Value: " ++ name
       ])
 
+-- | Parse `Whitelist.Storage`
 parseStorage :: forall a. (Ord a, Read a) => (String -> Opt.Parser a) -> Opt.Parser (Whitelist.Storage a)
 parseStorage p =
   (Whitelist.Storage <$>
@@ -410,6 +428,7 @@ parseStorage p =
         tripleToDouble :: forall a b c. (a, b, c) -> (a, (b, c))
         tripleToDouble ~(x, y, z) = (x, (y, z))
 
+-- | Parse `SomeStorage`, see `parseSomeContractParam`
 parseSomeStorage :: String -> Opt.Parser SomeStorage
 parseSomeStorage name =
   (\(SomeSing (st :: Sing t)) someStorage' ->
@@ -429,6 +448,7 @@ parseSomeStorage name =
   parseSomeT name <*>
   parseStorage parseString
 
+-- | Parse `SomeTransferParams`, see `parseSomeContractParam`
 parseSomeTransferParams :: Opt.Parser SomeTransferParams
 parseSomeTransferParams =
   (\(SomeSing (st :: Sing t)) fromStr toStr ->
@@ -464,6 +484,7 @@ parseSomeTransferParams =
     name :: IsString str => str
     name = "WhitelistContract"
 
+-- | Parse a `View_`
 parseView_ :: NiceParameter r => Opt.Parser (View () r)
 parseView_ = parseView $ pure ()
 
@@ -653,12 +674,12 @@ runCmdLnArgs = \case
            TL.putStrLn . printLorentzValue @(Wrapper.Parameter () (Value t)) forceSingleLine $
            Wrapper.WhitelistParameter $
            Whitelist.AddUser $
-           Whitelist.NewUserParams newUser' newUserWhitelistId
+           Whitelist.UpdateUserParams newUser' newUserWhitelistId
          else
            TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
            Whitelist.OtherParameter $
            Whitelist.AddUser $
-           Whitelist.NewUserParams newUser' newUserWhitelistId
+           Whitelist.UpdateUserParams newUser' newUserWhitelistId
   SetWhitelistOutbound {..} ->
     if wrapped
        then

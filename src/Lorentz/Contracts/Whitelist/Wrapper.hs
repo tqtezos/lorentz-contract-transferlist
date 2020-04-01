@@ -11,6 +11,7 @@ import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
 import Michelson.Typed.Scope
 
+import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Impl as Whitelist
 
@@ -21,7 +22,8 @@ data Parameter cp a
   | WhitelistParameter !(Whitelist.Parameter' a)
   deriving  (Generic)
 
-instance (NiceParameter cp, HasNoOp (ToT cp), HasNoNestedBigMaps (ToT cp), NiceParameter a) => ParameterEntryPoints (Parameter cp a) where
+instance (NiceParameter cp, HasNoOp (ToT cp), HasNoNestedBigMaps (ToT cp), NiceParameter a)
+  => ParameterEntryPoints (Parameter cp a) where
   parameterEntryPoints = pepNone
 
 deriving instance (Read cp, NiceParameter a, Read a) => Read (Parameter cp a)
@@ -45,7 +47,8 @@ toStorage = coerce_
 
 deriving instance (Show st, Show a) => Show (Storage st a)
 
-deriving instance (IsoValue st, Ord a, IsoValue a, IsoCValue a) => IsoValue (Storage st a)
+deriving instance (IsoValue st, Ord a, IsoValue a, IsoCValue a)
+  => IsoValue (Storage st a)
 
 -- | Given a transformation from @cp@ to zero or one `Whitelist.TransferParams`,
 -- use the whitelist to `Whitelist.assertTransfer` if `Just` and otherwise
@@ -61,63 +64,16 @@ whitelistWrappedContract getTransferParams wrappedContract = do
         dup
         getTransferParams
         ifNone
-          (do
-            dip $ do
-              unStorage
-              unpair
-              swap
-            swap
-            dip $ do
-              pair
-              wrappedContract
-              unpair
-            swap
-            dip $ do
-              swap
-              pair
-              toStorage
-            pair
-          )
-          (do
-            dip $ do
-              swap
-              unStorage
-              unpair
-              swap
-            Whitelist.assertTransfer
-            unpair
-            dip $ do
-              dip $ do
-                swap
-                pair
-                wrappedContract
-                unpair
-                swap
-              swap
-              pair
-              toStorage
-              swap
-            swap -- the result of Whitelist.assertTransfer is a singleton or nothing
-            prependSingletonOrNil
-            pair
-          )
-        -- wrappedParameter
+          (executeWrappedContract wrappedContract)
+          (assertExecuteWrappedContract wrappedContract)
     , #cWhitelistParameter /-> do
         dip $ do
           unStorage
           unpair
         swap
         dip $ do
-          caseT @(Whitelist.Parameter' a)
-            ( #cSetIssuer /-> Whitelist.setIssuer
-            , #cAddUser /-> Whitelist.addUser
-            , #cSetWhitelistOutbound /-> Whitelist.setWhitelistOutbound
-            , #cSetAdmin /-> Whitelist.setAdmin
-            , #cGetIssuer /-> Whitelist.getIssuer
-            , #cGetUser /-> Whitelist.getUser
-            , #cGetWhitelist /-> Whitelist.getWhitelist
-            , #cGetAdmin /-> Whitelist.getAdmin
-            )
+          pair
+          Whitelist.whitelistManagementContract @a
           unpair
         swap
         dip $ do
@@ -140,4 +96,54 @@ prependSingletonOrNil = do
         nop
     )
     nop
+
+-- | Run the @wrappedContract@ on the given parameter and storage
+executeWrappedContract :: forall a cp st. ()
+  => Contract cp st
+  -> cp & '[Storage st a] :-> '[([Operation], Storage st a)]
+executeWrappedContract wrappedContract = do
+  dip $ do
+    unStorage
+    unpair
+    swap
+  swap
+  dip $ do
+    pair
+    wrappedContract
+    unpair
+  swap
+  dip $ do
+    swap
+    pair
+    toStorage
+  pair
+
+-- | Run the @wrappedContract@ on the given parameter and storage,
+-- after running `Whitelist.assertTransfer` on the given
+-- `Whitelist.TransferParams`
+assertExecuteWrappedContract :: forall a cp st. (IsComparable a, CompareOpHs a, Typeable a)
+  => Contract cp st
+  -> Whitelist.TransferParams a & cp & '[Storage st a] :-> '[([Operation], Storage st a)]
+assertExecuteWrappedContract wrappedContract = do
+  dip $ do
+    swap
+    unStorage
+    unpair
+    swap
+  Whitelist.assertTransfer
+  unpair
+  dip $ do
+    dip $ do
+      swap
+      pair
+      wrappedContract
+      unpair
+      swap
+    swap
+    pair
+    toStorage
+    swap
+  swap -- the result of Whitelist.assertTransfer is a singleton or nothing
+  prependSingletonOrNil
+  pair
 

@@ -53,7 +53,8 @@ data WhitelistOutboundParams = WhitelistOutboundParams
   deriving  (IsoValue)
 
 -- | Unwrap `WhitelistOutboundParams`
-unWhitelistOutboundParams :: WhitelistOutboundParams & s :-> WhitelistId & Maybe OutboundWhitelists & s
+unWhitelistOutboundParams :: ()
+  => WhitelistOutboundParams & s :-> WhitelistId & Maybe OutboundWhitelists & s
 unWhitelistOutboundParams = do
   coerce_
   unpair
@@ -216,11 +217,13 @@ toStorage :: ((a, Users a), (Whitelists, Address)) & s :-> Storage a & s
 toStorage = coerce_
 
 -- | Specialized `update`
-addUserWhitelist :: forall a s. IsComparable a => a & Maybe WhitelistId & Users a & s :-> Users a & s
+addUserWhitelist :: forall a s. IsComparable a
+  => a & Maybe WhitelistId & Users a & s :-> Users a & s
 addUserWhitelist = update @(Users a)
 
 -- | Specialized `get`
-userWhitelist :: forall a s. IsComparable a => a & Users a & s :-> Maybe WhitelistId & s
+userWhitelist :: forall a s. IsComparable a
+  => a & Users a & s :-> Maybe WhitelistId & s
 userWhitelist = get @(Users a)
 
 -- | Assert that the user is on a whitelist
@@ -240,11 +243,13 @@ assertUsersWhitelist = do
   assertUserWhitelist
 
 -- | Specialized `update`
-setOutboundWhitelists :: forall s. WhitelistId & Maybe OutboundWhitelists & Whitelists & s :-> Whitelists & s
+setOutboundWhitelists :: forall s. ()
+  => WhitelistId & Maybe OutboundWhitelists & Whitelists & s :-> Whitelists & s
 setOutboundWhitelists = update @Whitelists
 
 -- | Specialized `get`
-outboundWhitelists :: forall s. WhitelistId & Whitelists & s :-> Maybe OutboundWhitelists & s
+outboundWhitelists :: forall s. ()
+  => WhitelistId & Whitelists & s :-> Maybe OutboundWhitelists & s
 outboundWhitelists = get @Whitelists
 
 -- | Assert that a `WhitelistId` has associated `OutboundWhitelists`
@@ -261,18 +266,22 @@ assertUnrestrictedOutboundWhitelists = do
   assert $ mkMTextUnsafe "outbound restricted"
 
 -- | Assert that the user is whitelisted and not blacklisted, or the issuer
+--
+-- @
+--  user & issuer & users & whitelists
+-- @
 assertReceiver :: forall a s. (IsComparable a, CompareOpHs a)
   => a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
 assertReceiver = do
   swap
   dup
+  -- issuer & issuer & user & users & whitelists
+  stackType @(a & a & a & Users a & Whitelists & s)
   dip $ do
     dip dup
     eq
-    if_
-       (do
-         drop
-       )
+    if_ -- user is issuer
+       drop
        (do
          dip dup
          assertUserWhitelist
@@ -280,8 +289,7 @@ assertReceiver = do
          dip $ do
            dip dup
            assertOutboundWhitelists
-           unOutboundWhitelists
-           car
-           assert $ mkMTextUnsafe "outbound restricted"
+           assertUnrestrictedOutboundWhitelists
+           drop
        )
 

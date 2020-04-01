@@ -24,7 +24,8 @@ whitelistedManagedLedgerContract =
 
 -- | If `ManagedLedger.Parameter` is `ManagedLedger.Transfer`,
 -- emit `Just` the to/from addresses, otherwise emit `Nothing`
-managedLedgerTransferParams :: forall s. ManagedLedger.Parameter & s :-> Maybe (Whitelist.TransferParams Address) & s
+managedLedgerTransferParams :: forall s. ()
+  => ManagedLedger.Parameter & s :-> Maybe (Whitelist.TransferParams Address) & s
 managedLedgerTransferParams = do
   caseT @ManagedLedger.Parameter
     ( #cTransfer /-> do

@@ -57,6 +57,8 @@ whitelistContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, Known
   => Contract (Parameter a) (Storage a)
 whitelistContract = do
   unpair
+  -- since AssertReceiver is just AssertReceivers with a singleton list,
+  -- we wrap the three cases into: Either (Either transfer other) receiver
   caseT @(Parameter a)
     ( #cAssertTransfer /-> left >> left
     , #cAssertReceiver /-> dip nil >> cons >> right

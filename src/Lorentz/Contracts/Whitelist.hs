@@ -111,9 +111,7 @@ data Parameter a
   -- | Assert that users are whitelisted and `unrestricted`
   | AssertReceivers ![a]
   -- | Management and `View` parameters
-  | OtherParameter
-      { otherParams :: !(Parameter' a)
-      }
+  | OtherParameter !(Parameter' a)
   deriving  (Generic)
 
 instance NiceParameter a => ParameterEntryPoints (Parameter a) where
@@ -362,8 +360,8 @@ whitelistContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, Known
 whitelistContract = do
   unpair
   caseT @(Parameter a)
-    ( #cAssertTransfer /-> left >> left -- assertTransfer
-    , #cAssertReceiver /-> dip nil >> cons >> right -- assertReceiver
+    ( #cAssertTransfer /-> left >> left
+    , #cAssertReceiver /-> dip nil >> cons >> right
     , #cAssertReceivers /-> right
     , #cOtherParameter /-> right >> left
     )

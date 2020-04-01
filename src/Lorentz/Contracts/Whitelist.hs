@@ -319,6 +319,7 @@ assertUnrestrictedOutboundWhitelists = do
   unpair
   assert $ mkMTextUnsafe "outbound restricted"
 
+-- | Assert that the user is whitelisted and not blacklisted, or the issuer
 assertReceiver :: forall a s. (IsComparable a, CompareOpHs a)
   => a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
 assertReceiver = do
@@ -429,7 +430,7 @@ assertTransfer = do
   nil
   pair
 
--- | Assert that all users are whitelisted and `unrestricted`
+-- | Assert that all users are whitelisted and `unrestricted`, or the issuer
 assertReceivers ::
      forall a s. (IsComparable a, CompareOpHs a)
   => [a] & Storage a & s :-> ([Operation], Storage a) & s

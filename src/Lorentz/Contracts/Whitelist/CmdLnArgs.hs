@@ -257,6 +257,12 @@ data CmdLnArgs
   | AssertTransfer
       { assertTransferParams :: !SomeTransferParams
       }
+  | AssertReceiver
+      { receiver :: !Address
+      }
+  | AssertReceivers
+      { receivers :: ![Address]
+      }
   | SetIssuer
       { newIssuer :: !SomeContractParam
       , wrapped :: !Bool
@@ -493,6 +499,8 @@ argParser = Opt.hsubparser $ mconcat
   [ printSubCmd
   , initSubCmd
   , assertTransferSubCmd
+  , assertReceiverSubCmd
+  , assertReceiversSubCmd
   , setIssuerSubCmd
   , addUserSubCmd
   , setWhitelistOutboundSubCmd
@@ -524,9 +532,29 @@ argParser = Opt.hsubparser $ mconcat
       "pass 'initialWrappedStorage' for the wrapped version")
 
     assertTransferSubCmd =
-      mkCommandParser "assertTransfer"
+      mkCommandParser "AssertTransfer"
       (AssertTransfer <$> parseSomeTransferParams)
       "Generate the parameter for the Whitelist contract: AssertTransfer"
+
+    assertReceiverSubCmd =
+      mkCommandParser "AssertReceiver"
+      (AssertReceiver <$> parseAddress "receiver")
+      "Generate the parameter for the Whitelist contract: AssertReceiver"
+
+    assertReceiversSubCmd =
+      mkCommandParser "AssertReceivers"
+      (AssertReceivers <$>
+        Opt.option
+          (parseList Opt.auto)
+          (mconcat
+            [ Opt.long "receivers"
+            , Opt.metavar "[Address]"
+            , Opt.help $ "Assert that all users are whitelisted and " <>
+                "not blacklisted, or the issuer"
+            ]
+          )
+      )
+      "Generate the parameter for the Whitelist contract: AssertReceivers"
 
     setIssuerSubCmd =
       mkCommandParser "SetIssuer"
@@ -650,6 +678,12 @@ runCmdLnArgs = \case
     fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Whitelist.TransferParams (Value t)) ->
     TL.putStrLn . printLorentzValue forceSingleLine $
     Whitelist.AssertTransfer assertTransferParams'
+  AssertReceiver {..} ->
+    TL.putStrLn . printLorentzValue forceSingleLine $
+    Whitelist.AssertReceiver receiver
+  AssertReceivers {..} ->
+    TL.putStrLn . printLorentzValue forceSingleLine $
+    Whitelist.AssertReceivers receivers
   SetIssuer {..} ->
     fromSomeContractParam newIssuer $ \(newIssuer' :: Value t) ->
       let st = sing @t in

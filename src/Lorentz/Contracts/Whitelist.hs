@@ -105,18 +105,16 @@ deriving instance IsoValue a => IsoValue (UpdateUserParams a)
 -- parameters.
 data Parameter a
   -- | Assert that a transfer is valid
-  = AssertTransfer
-      { transferParams :: !(TransferParams a)
-      }
+  = AssertTransfer !(TransferParams a)
+  -- | Assert that a user is whitelisted and `unrestricted`
+  | AssertReceiver !a
+  -- | Assert that users are whitelisted and `unrestricted`
+  | AssertReceivers ![a]
   -- | Management and `View` parameters
   | OtherParameter
       { otherParams :: !(Parameter' a)
       }
   deriving  (Generic)
-  -- Assert that multiple transfers are valid
-  -- AssertTransfers
-  --     { transfersParams :: ![TransferParams a]
-  --     }
 
 instance NiceParameter a => ParameterEntryPoints (Parameter a) where
   parameterEntryPoints = pepNone
@@ -174,22 +172,6 @@ deriving instance (NiceParameter a, Read a) => Read (Parameter' a)
 deriving instance Show a => Show (Parameter' a)
 
 deriving instance IsoValue a => IsoValue (Parameter' a)
-
--- | Convenience utility for calling `Parameter`
-toAssertTransfer :: forall a s. KnownValue a => TransferParams a & s :-> Parameter a & s
-toAssertTransfer = do
-  left @(TransferParams a) @(Parameter' a)
-  coerce_
-
--- | An easy way to call an instance of a `whitelistContract`
-callAssertTransfer :: forall a s. (NiceParameter a) => TransferParams a & Address & s :-> Operation & s
-callAssertTransfer = do
-  toAssertTransfer
-  dip $ do
-    contract @(Parameter a)
-    assertSome $ mkMTextUnsafe "Expected Whitelist Contract"
-    push (toEnum 0 :: Mutez)
-  transferTokens
 
 -- | A parameter-free `View`
 type View_ = View ()
@@ -337,6 +319,30 @@ assertUnrestrictedOutboundWhitelists = do
   unpair
   assert $ mkMTextUnsafe "outbound restricted"
 
+assertReceiver :: forall a s. (IsComparable a, CompareOpHs a)
+  => a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
+assertReceiver = do
+  swap
+  dup
+  dip $ do
+    dip dup
+    eq
+    if_
+       (do
+         drop
+       )
+       (do
+         dip dup
+         assertUserWhitelist
+         swap
+         dip $ do
+           dip dup
+           assertOutboundWhitelists
+           unOutboundWhitelists
+           car
+           assert $ mkMTextUnsafe "outbound restricted"
+       )
+
 -- | A contract that accepts either one or a batch of `TransferParams`
 -- and throws and error if any transfers are disallowed.
 --
@@ -355,18 +361,31 @@ whitelistContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, Known
 whitelistContract = do
   unpair
   caseT @(Parameter a)
-    ( #cAssertTransfer /-> assertTransfer
-    , #cOtherParameter /->
-        caseT @(Parameter' a)
-          ( #cSetIssuer /-> setIssuer
-          , #cAddUser /-> addUser
-          , #cSetWhitelistOutbound /-> setWhitelistOutbound
-          , #cSetAdmin /-> setAdmin
-          , #cGetIssuer /-> getIssuer
-          , #cGetUser /-> getUser
-          , #cGetWhitelist /-> getWhitelist
-          , #cGetAdmin /-> getAdmin
-          )
+    ( #cAssertTransfer /-> left >> left -- assertTransfer
+    , #cAssertReceiver /-> dip nil >> cons >> right -- assertReceiver
+    , #cAssertReceivers /-> right
+    , #cOtherParameter /-> right >> left
+    )
+  ifLeft
+    (ifLeft
+      assertTransfer
+      (pair >> whitelistManagementContract)
+    )
+    assertReceivers
+
+whitelistManagementContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a)
+  => Contract (Parameter' a) (Storage a)
+whitelistManagementContract = do
+  unpair
+  caseT @(Parameter' a)
+    ( #cSetIssuer /-> setIssuer
+    , #cAddUser /-> addUser
+    , #cSetWhitelistOutbound /-> setWhitelistOutbound
+    , #cSetAdmin /-> setAdmin
+    , #cGetIssuer /-> getIssuer
+    , #cGetUser /-> getUser
+    , #cGetWhitelist /-> getWhitelist
+    , #cGetAdmin /-> getAdmin
     )
 
 -- | Assert that one user is allowed to transfer to the other.
@@ -409,6 +428,63 @@ assertTransfer = do
     )
   nil
   pair
+
+-- | Assert that all users are whitelisted and `unrestricted`
+assertReceivers ::
+     forall a s. (IsComparable a, CompareOpHs a)
+  => [a] & Storage a & s :-> ([Operation], Storage a) & s
+assertReceivers = do
+  dip $ do
+    dup
+    unStorage
+    unpair
+    dip car
+    unpair
+  iter assertReceiver
+  dropN @3
+  nil
+  pair
+
+
+-- -- | Assert that the user is on a whitelist
+-- assertUserWhitelist :: IsComparable a => a & Users a & s :-> WhitelistId & s
+-- assertUserWhitelist = do
+--   userWhitelist
+--   assertSome $ mkMTextUnsafe "User not on a whitelist"
+
+-- -- | Assert that the users are on whitelists
+-- assertUsersWhitelist :: IsComparable a
+--   => a & a & Users a & s :-> WhitelistId & WhitelistId & s
+-- assertUsersWhitelist = do
+--   dip $ do
+--     dip dup
+--     assertUserWhitelist
+--     swap
+--   assertUserWhitelist
+
+-- -- | Specialized `update`
+-- setOutboundWhitelists :: forall s. WhitelistId & Maybe OutboundWhitelists & Whitelists & s :-> Whitelists & s
+-- setOutboundWhitelists = update @Whitelists
+
+-- -- | Specialized `get`
+-- outboundWhitelists :: forall s. WhitelistId & Whitelists & s :-> Maybe OutboundWhitelists & s
+-- outboundWhitelists = get @Whitelists
+
+-- -- | Assert that a `WhitelistId` has associated `OutboundWhitelists`
+-- assertOutboundWhitelists :: WhitelistId & Whitelists & s :-> OutboundWhitelists & s
+-- assertOutboundWhitelists = do
+--   outboundWhitelists
+--   assertSome $ mkMTextUnsafe "Whitelist does not exist"
+
+-- -- | Assert that `OutboundWhitelists` `unrestricted` is `True`
+-- assertUnrestrictedOutboundWhitelists :: OutboundWhitelists & s :-> Set WhitelistId & s
+-- assertUnrestrictedOutboundWhitelists = do
+--   unOutboundWhitelists
+--   unpair
+--   assert $ mkMTextUnsafe "outbound restricted"
+
+
+
 
 -- | Set the issuer
 --

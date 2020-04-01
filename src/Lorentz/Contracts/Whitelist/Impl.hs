@@ -10,7 +10,6 @@ import Michelson.Typed.Haskell.Value (IsComparable)
 
 import Lorentz.Contracts.Whitelist.Types
 
-
 --------------
 -- Entrypoints
 --------------
@@ -32,16 +31,18 @@ assertTransfer = do
     unpair
     dip car
     unpair
+    -- issuer & users & whitelists & store
+    stackType @(a & Users a & Whitelists & Storage a & s)
   unTransferParams
   swap
   dip $ do
     dup
     car
+  -- issuer & from & transfer & users & whitelists & store
+  stackType @(a & a & (a, a) & Users a & Whitelists & Storage a & s)
   ifEq
     (do
-      drop
-      drop
-      drop
+      dropN @3
     )
     (do
       unpair
@@ -67,6 +68,7 @@ assertReceivers = do
     unpair
     dip car
     unpair
+    stackType @(a & Users a & Whitelists & Storage a & s)
   iter assertReceiver
   dropN @3
   nil
@@ -82,6 +84,8 @@ setIssuer = do
     unpair
     dip $ do
       unpair
+      -- whitelists & admin
+      stackType @(Whitelists & Address & '[])
       dip $ assertAdmin
       pair
     cdr
@@ -110,11 +114,15 @@ addUser = do
     unpair
     dip $ do
       unpair
+      -- whitelists & admin
+      stackType @(Whitelists & Address & '[])
       dip $ do
         assertAdmin
       pair
     unpair
   unUpdateUserParams
+  -- user & new_whitelist & issuer & users & cdr store
+  stackType @(a & Maybe WhitelistId & a & Users a & (Whitelists, Address) & '[])
   swap
   dip assertNotIssuer
   pair

@@ -372,6 +372,7 @@ whitelistContract = do
     )
     assertReceivers
 
+-- | Management parameters for the `whitelistContract`. See `Parameter'`.
 whitelistManagementContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a)
   => Contract (Parameter' a) (Storage a)
 whitelistManagementContract = do
@@ -443,47 +444,6 @@ assertReceivers = do
   dropN @3
   nil
   pair
-
-
--- -- | Assert that the user is on a whitelist
--- assertUserWhitelist :: IsComparable a => a & Users a & s :-> WhitelistId & s
--- assertUserWhitelist = do
---   userWhitelist
---   assertSome $ mkMTextUnsafe "User not on a whitelist"
-
--- -- | Assert that the users are on whitelists
--- assertUsersWhitelist :: IsComparable a
---   => a & a & Users a & s :-> WhitelistId & WhitelistId & s
--- assertUsersWhitelist = do
---   dip $ do
---     dip dup
---     assertUserWhitelist
---     swap
---   assertUserWhitelist
-
--- -- | Specialized `update`
--- setOutboundWhitelists :: forall s. WhitelistId & Maybe OutboundWhitelists & Whitelists & s :-> Whitelists & s
--- setOutboundWhitelists = update @Whitelists
-
--- -- | Specialized `get`
--- outboundWhitelists :: forall s. WhitelistId & Whitelists & s :-> Maybe OutboundWhitelists & s
--- outboundWhitelists = get @Whitelists
-
--- -- | Assert that a `WhitelistId` has associated `OutboundWhitelists`
--- assertOutboundWhitelists :: WhitelistId & Whitelists & s :-> OutboundWhitelists & s
--- assertOutboundWhitelists = do
---   outboundWhitelists
---   assertSome $ mkMTextUnsafe "Whitelist does not exist"
-
--- -- | Assert that `OutboundWhitelists` `unrestricted` is `True`
--- assertUnrestrictedOutboundWhitelists :: OutboundWhitelists & s :-> Set WhitelistId & s
--- assertUnrestrictedOutboundWhitelists = do
---   unOutboundWhitelists
---   unpair
---   assert $ mkMTextUnsafe "outbound restricted"
-
-
-
 
 -- | Set the issuer
 --

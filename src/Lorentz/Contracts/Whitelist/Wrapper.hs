@@ -1,7 +1,4 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-
-{-# OPTIONS -Wno-missing-export-lists -Wno-unused-do-bind -Wno-partial-fields -Wno-orphans #-}
 
 module Lorentz.Contracts.Whitelist.Wrapper where
 
@@ -14,19 +11,14 @@ import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
 import Michelson.Typed.Scope
 
--- import Data.Functor.Timestamped
-import Lorentz.Contracts.Util ()
-import qualified Lorentz.Contracts.Whitelist as Whitelist
+import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
+import qualified Lorentz.Contracts.Whitelist.Impl as Whitelist
 
 type Entrypoint param store = '[ param, store] :-> ContractOut store
 
 data Parameter cp a
-  = WrappedParameter
-      { wrappedParams :: !cp
-      }
-  | WhitelistParameter
-      { whitelistParams :: !(Whitelist.Parameter' a)
-      }
+  = WrappedParameter !cp
+  | WhitelistParameter !(Whitelist.Parameter' a)
   deriving  (Generic)
 
 instance (NiceParameter cp, HasNoOp (ToT cp), HasNoNestedBigMaps (ToT cp), NiceParameter a) => ParameterEntryPoints (Parameter cp a) where
@@ -55,6 +47,9 @@ deriving instance (Show st, Show a) => Show (Storage st a)
 
 deriving instance (IsoValue st, Ord a, IsoValue a, IsoCValue a) => IsoValue (Storage st a)
 
+-- | Given a transformation from @cp@ to zero or one `Whitelist.TransferParams`,
+-- use the whitelist to `Whitelist.assertTransfer` if `Just` and otherwise
+-- execute the wrapped contract
 whitelistWrappedContract :: forall a cp st. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a, IsoValue cp)
   => (forall s. cp & s :-> Maybe (Whitelist.TransferParams a) & s)
   -> Contract cp st
@@ -130,33 +125,6 @@ whitelistWrappedContract getTransferParams wrappedContract = do
           toStorage
         pair
     )
-
--- | Appends the first list backwards onto the second
---
--- For this case, the list will always have 0 or 1 elements
--- but this is easier than proving it
-{-# DEPRECATED appendList "Convenient waste of gas" #-}
-appendList :: forall a s. KnownValue a => [a] & [a] & s :-> [a] & s
-appendList = do
-  unconsEither
-  loopLeft $ do
-    unpair
-    swap
-    dip cons
-    unconsEither
-  drop
-  where
-    unconsEither :: forall s'. [a] & s' :-> Either (a, [a]) () & s'
-    unconsEither = do
-      ifCons
-        (do
-          pair
-          left
-        )
-        (do
-          unit
-          right
-        )
 
 -- | If the first argument has more than one element, it fails
 -- with the second element, otherwise any elements are prepended

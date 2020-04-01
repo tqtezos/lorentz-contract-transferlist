@@ -1,4 +1,4 @@
-{-# OPTIONS -Wno-missing-export-lists -Wno-unused-do-bind -Wno-partial-fields -Wno-orphans #-}
+{-# OPTIONS -Wno-partial-fields -Wno-orphans #-}
 
 module Lorentz.Contracts.Whitelist.CmdLnArgs where
 
@@ -38,8 +38,15 @@ import Lorentz.Contracts.Parse
 import qualified Lorentz.Contracts.GenericMultisig.Wrapper as G
 
 import qualified Lorentz.Contracts.Whitelist as Whitelist
+import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
+import Lorentz.Contracts.Whitelist.Types
+  ( OutboundWhitelists(..)
+  , OutboundWhitelists(..)
+  , View_
+  , WhitelistId
+  , WhitelistOutboundParams(..)
+  )
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
-import Lorentz.Contracts.Whitelist (View_, OutboundWhitelists(..), WhitelistId, WhitelistOutboundParams(..), OutboundWhitelists(..))
 
 -- | TODO: merge upstream into morley
 instance IsoCValue (Value ('Tc ct)) where
@@ -431,7 +438,7 @@ parseStorage p =
          , Opt.help $ "Whitelists: Whitelist ID, Restricted, Allowed outbound Whitelist IDs"
          ]
       where
-        tripleToDouble :: forall a b c. (a, b, c) -> (a, (b, c))
+        tripleToDouble :: forall a' b c. (a', b, c) -> (a', (b, c))
         tripleToDouble ~(x, y, z) = (x, (y, z))
 
 -- | Parse `SomeStorage`, see `parseSomeContractParam`

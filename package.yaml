@@ -33,10 +33,12 @@ library:
     - aeson
     - constraints
     - binary
-    # - lorentz-contracts
     - lorentz-contract-param
     - optparse-applicative
     - transformers
+  ghc-options:
+    - -Wno-missing-export-lists
+    - -Wno-unused-do-bind
 
 executables:
   lorentz-contract-whitelist:
@@ -46,6 +48,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wno-missing-export-lists
+    - -Wno-unused-do-bind
     dependencies:
     - lorentz-contract-whitelist
     - optparse-applicative

@@ -1,7 +1,4 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-
-{-# OPTIONS -Wno-missing-export-lists -Wno-unused-do-bind -Wno-partial-fields -Wno-orphans #-}
 
 module Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger where
 
@@ -10,7 +7,7 @@ import Prelude hiding ((>>), drop, swap, get, some)
 import Lorentz
 
 import Lorentz.Contracts.Util ()
-import qualified Lorentz.Contracts.Whitelist as Whitelist
+import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
 
 import qualified Lorentz.Contracts.ManagedLedger as ManagedLedger
@@ -35,7 +32,7 @@ managedLedgerTransferParams = do
         unpair
         dip car
         pair
-        Whitelist.toTransferParams -- TransferParams { from :: Address, to :: Address }
+        Whitelist.toTransferParams
         some
     , #cApprove /-> drop >> none
     , #cGetAllowance /-> drop >> none

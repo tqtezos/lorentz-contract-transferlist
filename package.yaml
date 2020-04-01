@@ -68,5 +68,13 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wno-missing-export-lists
     dependencies:
+    - base
+    - morley
     - lorentz-contract-whitelist
+    - hspec
+    - HUnit
+    - tasty
+    - tasty-hspec
+    - tasty-hunit-compat

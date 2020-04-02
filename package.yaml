@@ -2,7 +2,7 @@
 
 <<: *meta
 name:                lorentz-contract-whitelist
-version:             0.2.0.0
+version:             0.3.0.0
 github:              "tqtezos/lorentz-contract-whitelist"
 license:             BSD3
 author:              "Michael J. Klein TQ Tezos"
@@ -33,10 +33,12 @@ library:
     - aeson
     - constraints
     - binary
-    # - lorentz-contracts
     - lorentz-contract-param
     - optparse-applicative
     - transformers
+  ghc-options:
+    - -Wno-missing-export-lists
+    - -Wno-unused-do-bind
 
 executables:
   lorentz-contract-whitelist:
@@ -46,6 +48,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wno-missing-export-lists
+    - -Wno-unused-do-bind
     dependencies:
     - lorentz-contract-whitelist
     - optparse-applicative
@@ -64,5 +68,14 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wno-missing-export-lists
     dependencies:
+    - base
+    - morley
     - lorentz-contract-whitelist
+    - hspec
+    - HUnit
+    - tasty
+    - tasty-hspec
+    - tasty-hunit-compat
+    - containers

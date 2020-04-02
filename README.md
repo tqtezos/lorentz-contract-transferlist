@@ -1,5 +1,5 @@
 
-See the FA1.2 [Quick Start Tutorial](https://assets.tqtezos.com/quickstart) for more detail.
+See the FA1.2 [Quick Start Tutorial](https://assets.tqtezos.com/token-contracts/1-fa12-lorentz) for more detail.
 
 # The CLI
 

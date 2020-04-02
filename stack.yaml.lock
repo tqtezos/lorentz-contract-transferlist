@@ -115,6 +115,13 @@ packages:
     subdir: .
     git: https://github.com/tqtezos/lorentz-contract-param.git
     commit: f6434e40c10ede0261e9f76d1ef039d23f257a34
+- completed:
+    hackage: tasty-hunit-compat-0.2@sha256:71e077ae5c514fadd4586efc19315f10fa5f3c94770820f68f63768441d665f7,1199
+    pantry-tree:
+      size: 229
+      sha256: ef4e8284433af224f89a1dfd2968ea79de3570cef6e81b10187aca5d1fae6f76
+  original:
+    hackage: tasty-hunit-compat-0.2@sha256:71e077ae5c514fadd4586efc19315f10fa5f3c94770820f68f63768441d665f7,1199
 snapshots:
 - completed:
     size: 498186

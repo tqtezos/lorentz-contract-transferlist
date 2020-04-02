@@ -1,4 +1,4 @@
-{-# OPTIONS -Wno-missing-export-lists -Wno-unused-do-bind -Wno-partial-fields -Wno-orphans #-}
+{-# OPTIONS -Wno-partial-fields #-}
 
 module Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger.CmdLnArgs where
 
@@ -14,7 +14,7 @@ import Lorentz.Contracts.Parse
 import qualified Lorentz.Contracts.ManagedLedger as ManagedLedger
 
 import qualified Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger as Whitelisted
-import qualified Lorentz.Contracts.Whitelist as Whitelist
+import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import qualified Lorentz.Contracts.Whitelist.CmdLnArgs as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
 

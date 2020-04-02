@@ -1,6 +1,7 @@
 module Test.Whitelist where
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 import Test.Hspec (Expectation)
 import Test.Tasty (TestTree, testGroup)
@@ -360,14 +361,67 @@ test_AddUser = testGroup "AddUser"
                else Left $ CustomValidationError "User was not removed"
   ]
 
+test_SetWhitelistOutbound :: TestTree
+test_SetWhitelistOutbound = testGroup "SetWhitelistOutbound"
+  [ testCase "Update outbound whitelists as non-admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        mempty
+        genesisAddress2 $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 Nothing
+          validate . Left $
+            lExpectMichelsonFailed (const True) whitelistContract'
+  , testCase "Update outbound whitelists as admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        mempty
+        genesisAddress $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 Nothing
+          validate . Right $ expectAnySuccess
+  , testCase "Add outbound whitelists as admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        mempty
+        genesisAddress $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 $ Just $ Whitelist.OutboundWhitelists True mempty
+          validate . Right $ lExpectStorageUpdate @(Whitelist.Storage Address) whitelistContract' $ \st ->
+            if Map.assocs (unBigMap $ Whitelist.whitelists st) == [(0, Whitelist.OutboundWhitelists True mempty)]
+               then return ()
+               else Left $ CustomValidationError "User was not added"
+  , testCase "Add existing outbound whitelists as admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        [(0, (True, []))]
+        genesisAddress $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 $ Just $ Whitelist.OutboundWhitelists True mempty
+          validate . Right $ expectNoStorageUpdates
+  , testCase "Update existing outbound whitelists as admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        [(0, (True, []))]
+        genesisAddress $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 $ Just $ Whitelist.OutboundWhitelists False (Set.singleton 0)
+          validate . Right $ lExpectStorageUpdate @(Whitelist.Storage Address) whitelistContract' $ \st ->
+            if Map.assocs (unBigMap $ Whitelist.whitelists st) == [(0, Whitelist.OutboundWhitelists False (Set.singleton 0))]
+               then return ()
+               else Left $ CustomValidationError "User was not updated"
+  , testCase "Remove outbound whitelist as admin" $ do
+      withWhitelistContract
+        genesisAddress1
+        mempty
+        [(0, (True, []))]
+        genesisAddress $ \whitelistContract' -> do
+          lCall whitelistContract' . Whitelist.OtherParameter $ Whitelist.SetWhitelistOutbound $ Whitelist.WhitelistOutboundParams 0 Nothing
+          validate . Right $ lExpectStorageUpdate @(Whitelist.Storage Address) whitelistContract' $ \st ->
+            if Whitelist.whitelists st == mempty
+               then return ()
+               else Left $ CustomValidationError "User was not removed"
+  ]
 
 
-
-
--- test_whitelist :: TestTree
--- test_whitelist = testGroup "Whitelist contract tests"
---   [ test_AssertTransfer
---   , test_AssertReceiver
---   , test_AssertReceivers
---   ]
 

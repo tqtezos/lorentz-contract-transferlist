@@ -23,8 +23,7 @@ data TransferParams a = TransferParams
     -- | The user receiving "tokens"
   , to   :: !a
   }
-  deriving  (Generic)
-  deriving  (Generic1)
+  deriving (Generic, Generic1)
 
 deriving instance Read a => Read (TransferParams a)
 
@@ -47,10 +46,7 @@ data WhitelistOutboundParams = WhitelistOutboundParams
     -- | The new `OutboundWhitelists` or `Nothing` to delete the whitelist
   , newOutboundWhitelists :: !(Maybe OutboundWhitelists)
   }
-  deriving  (Generic)
-  deriving  (Read)
-  deriving  (Show)
-  deriving  (IsoValue)
+  deriving  (Generic, Read, Show, IsoValue)
 
 -- | Unwrap `WhitelistOutboundParams`
 unWhitelistOutboundParams :: ()
@@ -67,8 +63,7 @@ data UpdateUserParams a = UpdateUserParams
     -- or `Nothing` to delete the user from the `Whitelists`
   , updateUserWhitelist :: !(Maybe WhitelistId)
   }
-  deriving  (Generic)
-  deriving  (Generic1)
+  deriving  (Generic, Generic1)
 
 -- | Unwrap `UpdateUserParams`
 unUpdateUserParams :: UpdateUserParams a & s :-> a & Maybe WhitelistId & s
@@ -144,10 +139,7 @@ data OutboundWhitelists = OutboundWhitelists
   { unrestricted        :: !Bool
   , allowedWhitelists :: !(Set WhitelistId)
   }
-  deriving  (Generic)
-  deriving  (Read)
-  deriving  (Show)
-  deriving  (IsoValue)
+  deriving (Eq, Generic, Read, Show, IsoValue)
 
 -- | Unwrap `OutboundWhitelists`
 unOutboundWhitelists :: OutboundWhitelists & s :-> (Bool, Set WhitelistId) & s

@@ -339,6 +339,9 @@ fromUntypedT (U.TLambda x y) = TLambda (fromUntypedT' x) (fromUntypedT' y)
 fromUntypedT (U.TMap ct x) = TMap (fromUntypedComparable ct) $ fromUntypedT' x
 fromUntypedT (U.TBigMap ct x) = TBigMap (fromUntypedComparable ct) $ fromUntypedT' x
 
+parseList' :: Read a => Opt.ReadM a -> Opt.ReadM [a]
+parseList' _ = Opt.auto
+
 -- | Parse some `T`
 parseSomeT :: String -> Opt.Parser (SomeSing T)
 parseSomeT name =
@@ -419,7 +422,7 @@ parseStorage p =
   where
     parseUsers :: Opt.Parser (Whitelist.Users a)
     parseUsers = fmap Whitelist.mkUsers $
-      Opt.option (parseList Opt.auto) $
+      Opt.option (parseList' Opt.auto) $
         mconcat
          [ Opt.long "users"
          , Opt.metavar "Map USER (Maybe WhitelistId)"
@@ -429,7 +432,7 @@ parseStorage p =
     parseWhitelists :: Opt.Parser (Whitelist.Whitelists)
     parseWhitelists = fmap Whitelist.mkWhitelists $
       Opt.option
-        (parseList $
+        (parseList' $
           tripleToDouble <$> Opt.auto
         ) $
         mconcat
@@ -552,7 +555,7 @@ argParser = Opt.hsubparser $ mconcat
       mkCommandParser "AssertReceivers"
       (AssertReceivers <$>
         Opt.option
-          (parseList Opt.auto)
+          (parseList' Opt.auto)
           (mconcat
             [ Opt.long "receivers"
             , Opt.metavar "[Address]"
@@ -588,7 +591,7 @@ argParser = Opt.hsubparser $ mconcat
           (parseMaybe (Whitelist.mkOutboundWhitelists <$>
             parseBool "restricted" <*>
             Opt.option
-              (parseList Opt.auto)
+              (parseList' Opt.auto)
               (mconcat
                 [ Opt.long "outboundWhitelist"
                 , Opt.metavar "[Natural]"

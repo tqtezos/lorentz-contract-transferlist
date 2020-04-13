@@ -16,15 +16,11 @@ import Text.Read
 
 import Lorentz hiding (get)
 import Michelson.Parser
-import Michelson.Typed.Annotation
-import Michelson.Typed.Arith
 import Michelson.Typed.Haskell.Value
 import Michelson.Typed.Scope
 import Michelson.Typed.Sing
 import Michelson.Typed.T
-import Michelson.Typed.Value
 import Util.IO
-import qualified Michelson.Untyped.Type as U
 
 import qualified Options.Applicative as Opt
 import qualified Data.Text as T
@@ -32,11 +28,11 @@ import qualified Data.Text.Lazy.IO as TL
 import Data.Constraint
 import Data.Singletons
 
-import Lorentz.Contracts.Util ()
+import Michelson.Typed.Scope.Missing
+import Michelson.Typed.Value.Missing ()
+import Lorentz.Contracts.Whitelist.Parsers
 import Lorentz.Contracts.SomeContractParam
-import Lorentz.Contracts.Parse
-import qualified Lorentz.Contracts.GenericMultisig.Wrapper as G
-
+import Lorentz.Contracts.SomeContractStorage
 import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import Lorentz.Contracts.Whitelist.Types
@@ -48,11 +44,21 @@ import Lorentz.Contracts.Whitelist.Types
   )
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
 
--- | TODO: merge upstream into morley
-instance IsoCValue (Value ('Tc ct)) where
-  type ToCT (Value ('Tc ct)) = ct
-  toCVal (VC xs) = xs
-  fromCVal = VC
+assertIsAddress ::
+     forall t. Typeable t
+  => Sing t
+  -> Dict (t ~ ToT Address)
+assertIsAddress st =
+  case eqT @t @(ToT Address) of
+    Nothing ->
+      error . fromString $
+      unwords
+        [ "assertIsAddress:"
+        , show (fromSing st)
+        , "is not"
+        , show (fromSing (sing @(ToT Address)))
+        ]
+    Just Refl -> Dict
 
 instance SingI ct => Ord (Value ('Tc ct)) where
   compare =
@@ -67,36 +73,6 @@ instance SingI ct => Ord (Value ('Tc ct)) where
       SCTimestamp -> Prelude.compare
       SCAddress -> Prelude.compare
 
-instance (Typeable ct, CompareOp ct) => CompareOpHs (Value ('Tc ct)) where
-
--- | `SingI` implies `CompareOp` forall `CT`
-compareOpCT :: forall ct. SingI ct :- CompareOp ct
-compareOpCT = Sub $
-  case sing @ct of
-    SCInt -> Dict
-    SCNat -> Dict
-    SCString -> Dict
-    SCBytes -> Dict
-    SCMutez -> Dict
-    SCBool -> Dict
-    SCKeyHash -> Dict
-    SCTimestamp -> Dict
-    SCAddress -> Dict
-
--- | Assert `HasNoOp`
-assertOpAbsense :: forall (t :: T) a. SingI t => (HasNoOp t => a) -> a
-assertOpAbsense f =
-  case opAbsense (sing @t) of
-    Nothing -> error "assertOpAbsense"
-    Just Dict -> forbiddenOp @t f
-
--- | Assert `HasNoBigMap`
-assertBigMapAbsense :: forall (t :: T) a. SingI t => (HasNoBigMap t => a) -> a
-assertBigMapAbsense f =
-  case bigMapAbsense (sing @t) of
-    Nothing -> error "assertBigMapAbsense"
-    Just Dict -> forbiddenBigMap @t f
-
 -- | Assert `IsComparable`
 assertIsComparable ::
      forall (t :: T) a. SingI t
@@ -109,117 +85,8 @@ assertIsComparable ::
 assertIsComparable f =
   case sing @t of
     STc _ -> f
-    _ -> error "assertIsComparable"
-
--- | `Sing` implies `Typeable`
-singTypeableCT :: forall (t :: CT). Sing t -> Dict (Typeable t)
-singTypeableCT SCInt = Dict
-singTypeableCT SCNat = Dict
-singTypeableCT SCString = Dict
-singTypeableCT SCBytes = Dict
-singTypeableCT SCMutez = Dict
-singTypeableCT SCBool = Dict
-singTypeableCT SCKeyHash = Dict
-singTypeableCT SCTimestamp = Dict
-singTypeableCT SCAddress = Dict
-
--- | `Sing` implies `Typeable`
-singTypeableT :: forall (t :: T). Sing t -> Dict (Typeable t)
-singTypeableT (STc ct) =
-  withDict (singTypeableCT ct) $
-  Dict
-singTypeableT STKey = Dict
-singTypeableT STUnit = Dict
-singTypeableT STSignature = Dict
-singTypeableT STChainId = Dict
-singTypeableT (STOption st) =
-  withDict (singTypeableT st) $
-  Dict
-singTypeableT (STList st) =
-  withDict (singTypeableT st) $
-  Dict
-singTypeableT (STSet st) =
-  withDict (singTypeableCT st) $
-  Dict
-singTypeableT STOperation  = Dict
-singTypeableT (STContract st) =
-  withDict (singTypeableT st) $
-  Dict
-singTypeableT (STPair st su) =
-  withDict (singTypeableT st) $
-  withDict (singTypeableT su) $
-  Dict
-singTypeableT (STOr st su) =
-  withDict (singTypeableT st) $
-  withDict (singTypeableT su) $
-  Dict
-singTypeableT (STLambda st su) =
-  withDict (singTypeableT st) $
-  withDict (singTypeableT su) $
-  Dict
-singTypeableT (STMap st su) =
-  withDict (singTypeableCT st) $
-  withDict (singTypeableT su) $
-  Dict
-singTypeableT (STBigMap st su) =
-  withDict (singTypeableCT st) $
-  withDict (singTypeableT su) $
-  Dict
-
--- | `Sing` implies `SingI`
-singICT :: forall (t :: CT). Sing t -> Dict (SingI t)
-singICT SCInt = Dict
-singICT SCNat = Dict
-singICT SCString = Dict
-singICT SCBytes = Dict
-singICT SCMutez = Dict
-singICT SCBool = Dict
-singICT SCKeyHash = Dict
-singICT SCTimestamp = Dict
-singICT SCAddress = Dict
-
--- | `Sing` implies `SingI`
-singIT :: forall (t :: T). Sing t -> Dict (SingI t)
-singIT (STc ct) =
-  withDict (singICT ct) $
-  Dict
-singIT STKey = Dict
-singIT STUnit = Dict
-singIT STSignature = Dict
-singIT STChainId = Dict
-singIT (STOption st) =
-  withDict (singIT st) $
-  Dict
-singIT (STList st) =
-  withDict (singIT st) $
-  Dict
-singIT (STSet st) =
-  withDict (singICT st) $
-  Dict
-singIT STOperation  = Dict
-singIT (STContract st) =
-  withDict (singIT st) $
-  Dict
-singIT (STPair st su) =
-  withDict (singIT st) $
-  withDict (singIT su) $
-  Dict
-singIT (STOr st su) =
-  withDict (singIT st) $
-  withDict (singIT su) $
-  Dict
-singIT (STLambda st su) =
-  withDict (singIT st) $
-  withDict (singIT su) $
-  Dict
-singIT (STMap st su) =
-  withDict (singICT st) $
-  withDict (singIT su) $
-  Dict
-singIT (STBigMap st su) =
-  withDict (singICT st) $
-  withDict (singIT su) $
-  Dict
+    _ -> error . fromString $
+      unwords ["assertIsComparable:", show (fromSing (sing @t)), "is not of the form: TC _"]
 
 -- | Some `Whitelist.Storage` with a `KnownValue` constraint
 data SomeStorage where
@@ -230,16 +97,6 @@ data SomeStorage where
 -- | Run `SomeStorage`
 fromSomeStorage :: forall b. SomeStorage -> (forall a. (KnownValue (Value a)) => Whitelist.Storage (Value a) -> b) -> b
 fromSomeStorage (SomeStorage xs) f = f xs
-
--- | Some contract storage with `SingI` and `HasNoOp` constraints
-data SomeContractStorage where
-  SomeContractStorage :: (SingI a, HasNoOp a)
-    => Value a
-    -> SomeContractStorage
-
--- | Run `SomeContractStorage`
-fromSomeContractStorage :: forall b. SomeContractStorage -> (forall a. (SingI a, HasNoOp a) => Value a -> b) -> b
-fromSomeContractStorage (SomeContractStorage xs) f = f xs
 
 -- | Some `Whitelist.TransferParams` with a `NicePrintedValue` constraint
 data SomeTransferParams where
@@ -288,11 +145,11 @@ data CmdLnArgs
       , wrapped :: !Bool
       }
   | GetIssuer
-      { viewIssuer :: !(View_ ())
+      { viewIssuer :: !(View_ Address)
       , wrapped :: !Bool
       }
   | GetUser
-      { viewUser :: !(View SomeContractParam (Maybe WhitelistId))
+      { viewUser :: !(View Address (Maybe WhitelistId))
       , wrapped :: !Bool
       }
   | GetWhitelist
@@ -307,105 +164,12 @@ data CmdLnArgs
       { wrappedParam :: !SomeContractParam
       }
 
--- | Make a type non-explicit
-unExplicitType :: U.Type -> U.T
-unExplicitType =
-  \case
-    U.Type t _ -> t
-
--- | Convert a `U.Comparable` to `CT`
-fromUntypedComparable :: U.Comparable -> CT
-fromUntypedComparable (U.Comparable ct _) = ct
-
--- | Convert a `U.Type` to `T`
-fromUntypedT' :: U.Type -> T
-fromUntypedT' = fromUntypedT . unExplicitType
-
--- | Convert a `U.T` to `T`
-fromUntypedT :: U.T -> T
-fromUntypedT (U.Tc ct) = Tc ct
-fromUntypedT U.TKey = TKey
-fromUntypedT U.TUnit = TUnit
-fromUntypedT U.TChainId = TChainId
-fromUntypedT U.TSignature = TSignature
-fromUntypedT (U.TOption x) = TOption $ fromUntypedT' x
-fromUntypedT (U.TList x) = TList $ fromUntypedT' x
-fromUntypedT (U.TSet ct) = TSet $ fromUntypedComparable ct
-fromUntypedT U.TOperation = TOperation
-fromUntypedT (U.TContract x) = TContract $ fromUntypedT' x
-fromUntypedT (U.TPair _ _ x y) = TPair (fromUntypedT' x) (fromUntypedT' y)
-fromUntypedT (U.TOr _ _ x y) = TOr (fromUntypedT' x) (fromUntypedT' y)
-fromUntypedT (U.TLambda x y) = TLambda (fromUntypedT' x) (fromUntypedT' y)
-fromUntypedT (U.TMap ct x) = TMap (fromUntypedComparable ct) $ fromUntypedT' x
-fromUntypedT (U.TBigMap ct x) = TBigMap (fromUntypedComparable ct) $ fromUntypedT' x
-
--- | Parse some `T`
-parseSomeT :: String -> Opt.Parser (SomeSing T)
-parseSomeT name =
-  (\typeStr ->
-    let parsedType = parseNoEnv
-          type_
-          name
-          typeStr
-     in let type' = either (error . T.pack . show) unExplicitType parsedType
-     in withSomeSingT (fromUntypedT type') SomeSing
-  ) <$>
-  Opt.strOption @Text
-    (mconcat
-      [ Opt.long $ name ++ "Type"
-      , Opt.metavar "Michelson Type"
-      , Opt.help $ "The Michelson Type of " ++ name
-      ])
-
--- | Parse `SomeContractParam`, given an argument for the type
-parseSomeContractParam :: String -> Opt.Parser SomeContractParam
-parseSomeContractParam name =
-  (\(SomeSing (st :: Sing t)) paramStr ->
-    withDict (singIT st) $
-    withDict (singTypeableT st) $
-    assertOpAbsense @t $
-    assertBigMapAbsense @t $
-    let parsedParam = parseNoEnv
-          (G.parseTypeCheckValue @t)
-          name
-          paramStr
-     in let param = either (error . T.pack . show) id parsedParam
-     in SomeContractParam param (st, starNotes) (Dict, Dict)
-  ) <$>
-  parseSomeT name <*>
-  Opt.strOption @Text
-    (mconcat
-      [ Opt.long name
-      , Opt.metavar "Michelson Value"
-      , Opt.help $ "The Michelson Value: " ++ name
-      ])
+parseList' :: Read a => Opt.ReadM a -> Opt.ReadM [a]
+parseList' _ = Opt.auto
 
 -- | Parse and return `Just` or `Nothing` if it fails
 parseMaybe :: Alternative f => f a -> f (Maybe a)
 parseMaybe p = fmap Just p <|> pure Nothing
-
--- | Parse `SomeContractStorage`, see `parseSomeContractParam`
-parseSomeContractStorage :: String -> Opt.Parser SomeContractStorage
-parseSomeContractStorage name =
-  (\(SomeSing (st :: Sing t)) paramStr ->
-    withDict (singIT st) $
-    withDict (singTypeableT st) $
-    assertOpAbsense @t $
-    assertBigMapAbsense @t $
-    let parsedParam = parseNoEnv
-          (G.parseTypeCheckValue @t)
-          name
-          paramStr
-     in let param = either (error . T.pack . show) id parsedParam
-     in SomeContractStorage param -- param (st, NStar) (Dict, Dict)
-  ) <$>
-  parseSomeT name <*>
-  Opt.strOption @Text
-    (mconcat
-      [ Opt.long name
-      , Opt.metavar "Michelson Value"
-      , Opt.help $ "The Michelson Value: " ++ name
-      ])
 
 -- | Parse `Whitelist.Storage`
 parseStorage :: forall a. (Ord a, Read a) => (String -> Opt.Parser a) -> Opt.Parser (Whitelist.Storage a)
@@ -419,7 +183,7 @@ parseStorage p =
   where
     parseUsers :: Opt.Parser (Whitelist.Users a)
     parseUsers = fmap Whitelist.mkUsers $
-      Opt.option (parseList Opt.auto) $
+      Opt.option (parseList' Opt.auto) $
         mconcat
          [ Opt.long "users"
          , Opt.metavar "Map USER (Maybe WhitelistId)"
@@ -429,7 +193,7 @@ parseStorage p =
     parseWhitelists :: Opt.Parser (Whitelist.Whitelists)
     parseWhitelists = fmap Whitelist.mkWhitelists $
       Opt.option
-        (parseList $
+        (parseList' $
           tripleToDouble <$> Opt.auto
         ) $
         mconcat
@@ -453,7 +217,7 @@ parseSomeStorage name =
     let parseTypeCheck str =
           either (error . T.pack . show) id $
           parseNoEnv
-            (G.parseTypeCheckValue @t)
+            (parseTypeCheckValue @t)
             name
             str
     in SomeStorage $ Whitelist.mapStorage (parseTypeCheck . T.pack) someStorage'
@@ -470,11 +234,11 @@ parseSomeTransferParams =
     assertOpAbsense @t $
     assertBigMapAbsense @t $
     let (parsedFrom, parsedTo) = ( parseNoEnv
-                                     (G.parseTypeCheckValue @t)
+                                     (parseTypeCheckValue @t)
                                      name
                                      $ T.pack fromStr
                                  , parseNoEnv
-                                     (G.parseTypeCheckValue @t)
+                                     (parseTypeCheckValue @t)
                                      name
                                      $ T.pack toStr
                                  )
@@ -496,10 +260,6 @@ parseSomeTransferParams =
   where
     name :: IsString str => str
     name = "WhitelistContract"
-
--- | Parse a `View_`
-parseView_ :: NiceParameter r => Opt.Parser (View () r)
-parseView_ = parseView $ pure ()
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
@@ -552,7 +312,7 @@ argParser = Opt.hsubparser $ mconcat
       mkCommandParser "AssertReceivers"
       (AssertReceivers <$>
         Opt.option
-          (parseList Opt.auto)
+          (parseList' Opt.auto)
           (mconcat
             [ Opt.long "receivers"
             , Opt.metavar "[Address]"
@@ -588,7 +348,7 @@ argParser = Opt.hsubparser $ mconcat
           (parseMaybe (Whitelist.mkOutboundWhitelists <$>
             parseBool "restricted" <*>
             Opt.option
-              (parseList Opt.auto)
+              (parseList' Opt.auto)
               (mconcat
                 [ Opt.long "outboundWhitelist"
                 , Opt.metavar "[Natural]"
@@ -612,7 +372,7 @@ argParser = Opt.hsubparser $ mconcat
     getIssuerSubCmd =
       mkCommandParser "GetIssuer"
       (GetIssuer <$>
-        parseView_ <*>
+        parseView_ (Proxy @Address) <*>
         parseBool "wrapped"
       )
       "Generate the (wrapped) parameter for the Whitelist contract: GetIssuer"
@@ -620,7 +380,7 @@ argParser = Opt.hsubparser $ mconcat
     getUserSubCmd =
       mkCommandParser "GetUser"
       (GetUser <$>
-        parseView (parseSomeContractParam "user") <*>
+        parseView @Address @(Maybe Whitelist.WhitelistId) (parseAddress "user") <*> -- (parseSomeContractParam "user")
         parseBool "wrapped"
       )
       "Generate the (wrapped) parameter for the Whitelist contract: GetUser"
@@ -628,7 +388,7 @@ argParser = Opt.hsubparser $ mconcat
     getWhitelistSubCmd =
       mkCommandParser "GetWhitelist"
       (GetWhitelist <$>
-        parseView (parseNatural "whitelistId") <*>
+        parseView @Natural @(Maybe Whitelist.OutboundWhitelists) (parseNatural "whitelistId") <*>
         parseBool "wrapped"
       )
       "Generate the (wrapped) parameter for the Whitelist contract: GetWhitelist"
@@ -636,7 +396,7 @@ argParser = Opt.hsubparser $ mconcat
     getAdminSubCmd =
       mkCommandParser "GetAdmin"
       (GetAdmin <$>
-        parseView_ <*>
+        parseView_ (Proxy @Address) <*>
         parseBool "wrapped"
       )
       "Generate the (wrapped) parameter for the Whitelist contract: GetAdmin"
@@ -658,12 +418,13 @@ runCmdLnArgs = \case
   Print (SomeSing (st :: Sing t)) mOutput forceOneLine ->
     withDict (singIT st) $
     withDict (singTypeableT st) $
-    assertOpAbsense @t $
-    assertBigMapAbsense @t $
-    assertIsComparable @t $
-    withDict (compareOpCT @(ToCT (Value t))) $
+    withDict (assertIsAddress st) $
+    -- assertOpAbsense @t $
+    -- assertBigMapAbsense @t $
+    -- assertIsComparable @t $
+    -- withDict (compareOpCT @(ToCT (Value t))) $
     maybe TL.putStrLn writeFileUtf8 mOutput $
-    printLorentzContract forceOneLine (Whitelist.whitelistContract @(Value t))
+    printLorentzContract forceOneLine (Whitelist.whitelistContract @Address) -- (Value t))
   Init {..} ->
     fromSomeStorage initialStorage $ \(initialStorage' :: Whitelist.Storage (Value s)) ->
       assertIsComparable @s $
@@ -744,25 +505,25 @@ runCmdLnArgs = \case
   GetIssuer {..} ->
     if wrapped
        then
-         TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
+         TL.putStrLn . printLorentzValue @(Wrapper.Parameter () Address) forceSingleLine $
          Wrapper.WhitelistParameter $
          Whitelist.GetIssuer viewIssuer
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
+         TL.putStrLn . printLorentzValue @(Whitelist.Parameter Address) forceSingleLine $
          Whitelist.OtherParameter $
          Whitelist.GetIssuer viewIssuer
   GetUser {..} ->
     case viewUser of
       View viewParam addr' ->
-        fromSomeContractParam viewParam $ \(viewParam' :: Value t) ->
-          let viewUser' = View viewParam' addr'
+        -- fromSomeContractParam viewParam $ \(viewParam' :: Value t) ->
+          let viewUser' = View viewParam addr'
            in if wrapped
                  then
-                   TL.putStrLn . printLorentzValue @(Wrapper.Parameter () (Value t)) forceSingleLine $
+                   TL.putStrLn . printLorentzValue @(Wrapper.Parameter () Address) forceSingleLine $
                    Wrapper.WhitelistParameter $
                    Whitelist.GetUser viewUser'
                  else
-                   TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
+                   TL.putStrLn . printLorentzValue @(Whitelist.Parameter Address) forceSingleLine $
                    Whitelist.OtherParameter $
                    Whitelist.GetUser viewUser'
   GetWhitelist {..} ->

@@ -22,6 +22,7 @@ library:
     - data-default
     - fmt
     - morley
+    - lorentz
     - morley-prelude
     - morley-ledgers
     - named
@@ -33,9 +34,11 @@ library:
     - aeson
     - constraints
     - binary
-    - lorentz-contract-param
+    # - lorentz-contract-param
     - optparse-applicative
     - transformers
+    - first-class-families < 0.8.0.0
+    - megaparsec
   ghc-options:
     - -Wno-missing-export-lists
     - -Wno-unused-do-bind
@@ -54,6 +57,7 @@ executables:
     - lorentz-contract-whitelist
     - optparse-applicative
     - morley
+    - lorentz
     - named
     - text
     - morley-prelude
@@ -72,6 +76,7 @@ tests:
     dependencies:
     - base
     - morley
+    - lorentz
     - lorentz-contract-whitelist
     - hspec
     - HUnit

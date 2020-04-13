@@ -14,8 +14,6 @@ import Lorentz
 import Michelson.Text
 import Michelson.Typed.Haskell.Value (IsComparable)
 
-import Lorentz.Contracts.Util ()
-
 -- | A transfer between users
 data TransferParams a = TransferParams
   { -- | The user sending "tokens"
@@ -31,13 +29,15 @@ deriving instance Show a => Show (TransferParams a)
 
 deriving instance IsoValue a => IsoValue (TransferParams a)
 
+instance HasTypeAnn a => HasTypeAnn (TransferParams a)
+
 -- | Wrap `TransferParams`
 toTransferParams :: (a, a) & s :-> TransferParams a & s
-toTransferParams = coerce_
+toTransferParams = forcedCoerce_
 
 -- | Unwrap `TransferParams`
 unTransferParams :: TransferParams a & s :-> (a, a) & s
-unTransferParams = coerce_
+unTransferParams = forcedCoerce_
 
 -- | Set the `OutboundWhitelists` for a particular `WhitelistId` (only admin)
 data WhitelistOutboundParams = WhitelistOutboundParams
@@ -48,11 +48,13 @@ data WhitelistOutboundParams = WhitelistOutboundParams
   }
   deriving  (Generic, Read, Show, IsoValue)
 
+instance HasTypeAnn WhitelistOutboundParams
+
 -- | Unwrap `WhitelistOutboundParams`
 unWhitelistOutboundParams :: ()
   => WhitelistOutboundParams & s :-> WhitelistId & Maybe OutboundWhitelists & s
 unWhitelistOutboundParams = do
-  coerce_
+  forcedCoerce_
   unpair
 
 -- | Update/insert a user's `WhitelistId` or remove them from the `Whitelists`
@@ -68,7 +70,7 @@ data UpdateUserParams a = UpdateUserParams
 -- | Unwrap `UpdateUserParams`
 unUpdateUserParams :: UpdateUserParams a & s :-> a & Maybe WhitelistId & s
 unUpdateUserParams = do
-  coerce_
+  forcedCoerce_
   unpair
 
 deriving instance Read a => Read (UpdateUserParams a)
@@ -76,6 +78,8 @@ deriving instance Read a => Read (UpdateUserParams a)
 deriving instance Show a => Show (UpdateUserParams a)
 
 deriving instance IsoValue a => IsoValue (UpdateUserParams a)
+
+instance HasTypeAnn a => HasTypeAnn (UpdateUserParams a)
 
 
 -- | Management and `View` parameters
@@ -104,11 +108,14 @@ data Parameter' a
   | GetAdmin !(View_ Address)
   deriving  (Generic)
 
-deriving instance (NiceParameter a, Read a) => Read (Parameter' a)
-
 deriving instance Show a => Show (Parameter' a)
 
 deriving instance IsoValue a => IsoValue (Parameter' a)
+
+instance (HasTypeAnn a, IsoValue a) => ParameterHasEntryPoints (Parameter' a) where
+  type ParameterEntryPointsDerivation (Parameter' a) = EpdPlain
+
+instance HasTypeAnn a => HasTypeAnn (Parameter' a)
 
 -- | A parameter-free `View`
 type View_ = View ()
@@ -141,9 +148,11 @@ data OutboundWhitelists = OutboundWhitelists
   }
   deriving (Eq, Generic, Read, Show, IsoValue)
 
+instance HasTypeAnn OutboundWhitelists
+
 -- | Unwrap `OutboundWhitelists`
 unOutboundWhitelists :: OutboundWhitelists & s :-> (Bool, Set WhitelistId) & s
-unOutboundWhitelists = coerce_
+unOutboundWhitelists = forcedCoerce_
 
 -- | An assignment from `WhitelistId` to outbound permissions.
 type Whitelists = BigMap WhitelistId OutboundWhitelists
@@ -198,15 +207,15 @@ mkStorage = do
   pair
   dip pair
   pair
-  coerce_
+  forcedCoerce_
 
 -- | Unwrap `Storage`
 unStorage :: Storage a & s :-> ((a, Users a), (Whitelists, Address)) & s
-unStorage = coerce_
+unStorage = forcedCoerce_
 
 -- | Wrap `Storage`
 toStorage :: ((a, Users a), (Whitelists, Address)) & s :-> Storage a & s
-toStorage = coerce_
+toStorage = forcedCoerce_
 
 -- | Specialized `update`
 addUserWhitelist :: forall a s. IsComparable a
@@ -216,16 +225,17 @@ addUserWhitelist = update @(Users a)
 -- | Specialized `get`
 userWhitelist :: forall a s. IsComparable a
   => a & Users a & s :-> Maybe WhitelistId & s
-userWhitelist = get @(Users a)
+userWhitelist = get @(Users a) -- case niceComparableEvi @a of
+                  -- Sub Dict -> get @(Users a) -- \\ niceComparableEvi @a
 
 -- | Assert that the user is on a whitelist
-assertUserWhitelist :: IsComparable a => a & Users a & s :-> WhitelistId & s
+assertUserWhitelist :: (NiceComparable a, IsComparable a) => a & Users a & s :-> WhitelistId & s
 assertUserWhitelist = do
   userWhitelist
   assertSome $ mkMTextUnsafe "User not on a whitelist"
 
 -- | Assert that the users are on whitelists
-assertUsersWhitelist :: IsComparable a
+assertUsersWhitelist :: (NiceComparable a, IsComparable a)
   => a & a & Users a & s :-> WhitelistId & WhitelistId & s
 assertUsersWhitelist = do
   dip $ do
@@ -262,7 +272,7 @@ assertUnrestrictedOutboundWhitelists = do
 -- @
 --  user & issuer & users & whitelists
 -- @
-assertReceiver :: forall a s. (IsComparable a, CompareOpHs a)
+assertReceiver :: forall a s. (NiceComparable a, IsComparable a)
   => a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
 assertReceiver = do
   swap

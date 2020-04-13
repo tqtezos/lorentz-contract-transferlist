@@ -9,7 +9,6 @@ import Test.Tasty.HUnit (testCase)
 
 import Lorentz
 import Lorentz.Test
--- import Michelson.Test.Integrational
 
 import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
@@ -19,7 +18,7 @@ withWhitelistContract :: ()
   -> [(Address, Whitelist.WhitelistId)]
   -> [(Whitelist.WhitelistId, (Bool, [Whitelist.WhitelistId]))]
   -> Address
-  -> (ContractRef (Whitelist.Parameter Address) -> IntegrationalScenario)
+  -> (TAddress (Whitelist.Parameter Address) -> IntegrationalScenario)
   -> Expectation
 withWhitelistContract issuer' users' whitelists' admin' callback =
   integrationalTestExpectation $ do

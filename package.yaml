@@ -76,6 +76,7 @@ tests:
     dependencies:
     - base
     - morley
+    - lorentz
     - lorentz-contract-whitelist
     - hspec
     - HUnit

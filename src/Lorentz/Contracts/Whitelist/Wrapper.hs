@@ -5,11 +5,9 @@ module Lorentz.Contracts.Whitelist.Wrapper where
 import Prelude hiding ((>>), drop, swap, get)
 import GHC.Generics (Generic)
 import Text.Show (Show(..))
-import Text.Read (Read(..))
 
 import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
-import Michelson.Typed.Scope
 
 import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
@@ -22,11 +20,8 @@ data Parameter cp a
   | WhitelistParameter !(Whitelist.Parameter' a)
   deriving  (Generic)
 
-instance (NiceParameter cp, HasNoOp (ToT cp), HasNoNestedBigMaps (ToT cp), NiceParameter a)
-  => ParameterEntryPoints (Parameter cp a) where
-  parameterEntryPoints = pepNone
-
-deriving instance (Read cp, NiceParameter a, Read a) => Read (Parameter cp a)
+instance (HasTypeAnn cp, IsoValue cp) => ParameterHasEntryPoints (Parameter cp Address) where
+  type ParameterEntryPointsDerivation (Parameter cp Address) = EpdPlain
 
 deriving instance (Show cp, Show a) => Show (Parameter cp a)
 
@@ -40,10 +35,10 @@ data Storage st a =
   deriving  (Generic)
 
 unStorage :: Storage st a & s :-> (st, Whitelist.Storage a) & s
-unStorage = coerce_
+unStorage = forcedCoerce_
 
 toStorage :: (st, Whitelist.Storage a) & s :-> Storage st a & s
-toStorage = coerce_
+toStorage = forcedCoerce_
 
 deriving instance (Show st, Show a) => Show (Storage st a)
 
@@ -53,10 +48,10 @@ deriving instance (IsoValue st, Ord a, IsoValue a, IsoCValue a)
 -- | Given a transformation from @cp@ to zero or one `Whitelist.TransferParams`,
 -- use the whitelist to `Whitelist.assertTransfer` if `Just` and otherwise
 -- execute the wrapped contract
-whitelistWrappedContract :: forall a cp st. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a, IsoValue cp)
+whitelistWrappedContract :: forall a cp st. (IsComparable a, KnownValue a, NoOperation a, IsoValue cp)
   => (forall s. cp & s :-> Maybe (Whitelist.TransferParams a) & s)
-  -> Contract cp st
-  -> Contract (Parameter cp a) (Storage st a)
+  -> ContractCode cp st
+  -> ContractCode (Parameter cp a) (Storage st a)
 whitelistWrappedContract getTransferParams wrappedContract = do
   unpair
   caseT @(Parameter cp a)
@@ -99,7 +94,7 @@ prependSingletonOrNil = do
 
 -- | Run the @wrappedContract@ on the given parameter and storage
 executeWrappedContract :: forall a cp st. ()
-  => Contract cp st
+  => ContractCode cp st
   -> cp & '[Storage st a] :-> '[([Operation], Storage st a)]
 executeWrappedContract wrappedContract = do
   dip $ do
@@ -121,8 +116,8 @@ executeWrappedContract wrappedContract = do
 -- | Run the @wrappedContract@ on the given parameter and storage,
 -- after running `Whitelist.assertTransfer` on the given
 -- `Whitelist.TransferParams`
-assertExecuteWrappedContract :: forall a cp st. (IsComparable a, CompareOpHs a, Typeable a)
-  => Contract cp st
+assertExecuteWrappedContract :: forall a cp st. (NiceComparable a, IsComparable a)
+  => ContractCode cp st
   -> Whitelist.TransferParams a & cp & '[Storage st a] :-> '[([Operation], Storage st a)]
 assertExecuteWrappedContract wrappedContract = do
   dip $ do

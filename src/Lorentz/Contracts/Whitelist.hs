@@ -5,10 +5,10 @@ module Lorentz.Contracts.Whitelist where
 import Prelude hiding ((>>), drop, swap, get)
 import GHC.Generics (Generic, Generic1)
 import Text.Show (Show(..))
-import Text.Read (Read(..))
 
 import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
+import Michelson.Typed.Value.Missing ()
 
 import Lorentz.Contracts.Whitelist.Types
 import Lorentz.Contracts.Whitelist.Impl
@@ -30,10 +30,10 @@ data Parameter a
   | OtherParameter !(Parameter' a)
   deriving (Generic, Generic1)
 
-instance NiceParameter a => ParameterEntryPoints (Parameter a) where
-  parameterEntryPoints = pepNone
-
-deriving instance (NiceParameter a, Read a) => Read (Parameter a)
+-- instance (HasTypeAnn a, IsoValue a) => ParameterHasEntryPoints (Parameter a) where
+--   type ParameterEntryPointsDerivation (Parameter a) = EpdRecursive
+instance ParameterHasEntryPoints (Parameter Address) where
+  type ParameterEntryPointsDerivation (Parameter Address) = EpdRecursive
 
 deriving instance Show a => Show (Parameter a)
 
@@ -53,8 +53,8 @@ deriving instance IsoValue a => IsoValue (Parameter a)
 -- - A user may transfer to any other whitelisted user with a whitelist in their whitelist's outbound list
 --
 -- See `Parameter` and `Storage` for more detail.
-whitelistContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a)
-  => Contract (Parameter a) (Storage a)
+whitelistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+  => ContractCode (Parameter a) (Storage a)
 whitelistContract = do
   unpair
   -- since AssertReceiver is just AssertReceivers with a singleton list,
@@ -73,8 +73,8 @@ whitelistContract = do
     assertReceivers
 
 -- | Management parameters for the `whitelistContract`. See `Parameter'`.
-whitelistManagementContract :: forall a. (IsComparable a, CompareOpHs a, Typeable a, KnownValue a, NoOperation a)
-  => Contract (Parameter' a) (Storage a)
+whitelistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+  => ContractCode (Parameter' a) (Storage a)
 whitelistManagementContract = do
   unpair
   caseT @(Parameter' a)

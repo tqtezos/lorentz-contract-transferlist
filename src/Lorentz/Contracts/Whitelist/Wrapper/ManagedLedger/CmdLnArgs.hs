@@ -1,4 +1,4 @@
-{-# OPTIONS -Wno-partial-fields #-}
+{-# OPTIONS -Wno-partial-fields -Wno-orphans #-}
 
 module Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger.CmdLnArgs where
 
@@ -9,14 +9,15 @@ import qualified Options.Applicative as Opt
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Map.Strict as Map
 
-import Lorentz.Contracts.Util ()
-import Lorentz.Contracts.Parse
 import qualified Lorentz.Contracts.ManagedLedger as ManagedLedger
 
+import Lorentz.Contracts.Whitelist.Parsers
 import qualified Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger as Whitelisted
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import qualified Lorentz.Contracts.Whitelist.CmdLnArgs as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
+
+instance HasTypeAnn ManagedLedger.Parameter
 
 data CmdLnArgs
   = Print (Maybe FilePath) Bool

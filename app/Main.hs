@@ -18,7 +18,6 @@ import Michelson.Printer
 
 import qualified Options.Applicative as Opt
 import qualified Data.Text.Lazy as TL
-import Data.Singletons
 import Text.PrettyPrint.ANSI.Leijen.Internal (Doc, linebreak)
 
 import qualified Lorentz.Contracts.Whitelist.CmdLnArgs as WhitelistCmdLnArgs

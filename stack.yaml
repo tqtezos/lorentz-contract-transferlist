@@ -2,10 +2,6 @@ resolver: lts-13.22
 
 packages:
 - .
-# - prelude
-# - lorentz-contracts
-# - indigo
-
 
 extra-deps:
 - aeson-options-0.1.0
@@ -14,33 +10,85 @@ extra-deps:
 - hex-text-0.1.0.0
 - pretty-terminal-0.1.0.0
 - show-type-0.1.1
-- first-class-families-0.6.0.0@sha256:9d2a2a0092dfb8fd0e688b0b6bf71242fbc393c028b0b669d25ed387667490c2
-- morley-0.5.0
-- morley-prelude-0.3.0@sha256:9e9473ac14cfa206adf0a3700764c0251de05042f1fe45daf9cb8556079ae663
+- git: https://github.com/int-index/caps.git
+  commit: ab4345eabd58fc6f05d3b46bea2c5acdba3ec6f8
 
-  # morley-0.5.0 doesn't come with a version of morley-ledgers on hackage
+# tezos-bake-monitor-lib and its deps which are used in morley-client
+- git:
+    https://gitlab.com/obsidian.systems/tezos-bake-monitor-lib.git
+  commit:
+    19a9ce57a0510bc3ad8a3f639d0a968a65024b86
+  subdirs:
+    - tezos-bake-monitor-lib
+- functor-infix-0.0.5@sha256:cea21a321031f556d7a21b51e049493e7cb78baf64dd63f0d1a36de01c4c735b
+- hashing-0.1.0.1@sha256:98861f16791946cdf28e3c7a6ee9ac8b72d546d6e33c569c7087ef18253294e7
+- dependent-sum-0.6.2.0
+- dependent-sum-template-0.1.0.0
+- constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b
+- first-class-families-0.7.0.0@sha256:4759bada637c8ee53758495e938591a14d259db8343ab7b4b313bbb1dfc770cf,1574
+
+# This breaks lorentz-0.2.0
+# - first-class-families-0.8.0.0@sha256:0548e47d9ad682e8a755e79a4030b22a4154b45c54d0a228041991a7439365fa,1751
+
+- morley-1.1.0
+- lorentz-0.2.0
+- morley-prelude-0.3.0
+
+# morley-1.1.0 doesn't come with a version of these packages on hackage
 - git:
     https://gitlab.com/morley-framework/morley.git
     # ^ CI cannot use ssh, so we use http clone here
   commit:
-    4d825ab1ca9adcafa368a057b18bacfb220ae939 # 0.5.0
+    9f90fd3e593212c00e937fdaf8e5e3b094605881 # 1.1.0
   subdirs:
-    # - .
-    # - prelude
-    # - morley-upgradeable
-    - morley-ledgers
-    - morley-ledgers-test
-    # - indigo
+    - code/indigo
+    - code/indigo/tutorial
+    # - code/lorentz
+    # - code/morley
+    - code/morley-client
+    - code/morley-ledgers
+    - code/morley-ledgers-test
+    - code/morley-multisig
+    - code/morley-nettest
+    # - code/morley-prelude
+    - code/morley-upgradeable
+    - code/morley-debugger
+    - code/tasty-hunit-compat
 
-- git:
-    https://github.com/tqtezos/lorentz-contract-param.git
-    # ^ CI cannot use ssh, so we use http clone here
-  commit:
-    f6434e40c10ede0261e9f76d1ef039d23f257a34 # 2.0.5.0.0
-  subdirs:
-    - .
+# extra-deps:
+# - aeson-options-0.1.0
+# - base58-bytestring-0.1.0
+# - constraints-0.11
+# - hex-text-0.1.0.0
+# - pretty-terminal-0.1.0.0
+# - show-type-0.1.1
+# - first-class-families-0.6.0.0@sha256:9d2a2a0092dfb8fd0e688b0b6bf71242fbc393c028b0b669d25ed387667490c2
+# - morley-0.5.0
+# - morley-prelude-0.3.0@sha256:9e9473ac14cfa206adf0a3700764c0251de05042f1fe45daf9cb8556079ae663
 
-- tasty-hunit-compat-0.2@sha256:71e077ae5c514fadd4586efc19315f10fa5f3c94770820f68f63768441d665f7,1199
+#   # morley-0.5.0 doesn't come with a version of morley-ledgers on hackage
+# - git:
+#     https://gitlab.com/morley-framework/morley.git
+#     # ^ CI cannot use ssh, so we use http clone here
+#   commit:
+#     4d825ab1ca9adcafa368a057b18bacfb220ae939 # 0.5.0
+#   subdirs:
+#     # - .
+#     # - prelude
+#     # - morley-upgradeable
+#     - morley-ledgers
+#     - morley-ledgers-test
+#     # - indigo
+
+# - git:
+#     https://github.com/tqtezos/lorentz-contract-param.git
+#     # ^ CI cannot use ssh, so we use http clone here
+#   commit:
+#     f6434e40c10ede0261e9f76d1ef039d23f257a34 # 2.0.5.0.0
+#   subdirs:
+#     - .
+
+# - tasty-hunit-compat-0.2@sha256:71e077ae5c514fadd4586efc19315f10fa5f3c94770820f68f63768441d665f7,1199
 
 nix:
   shell-file: shell.nix

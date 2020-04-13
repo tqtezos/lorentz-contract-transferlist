@@ -22,7 +22,7 @@ import Lorentz.Contracts.Whitelist.Types
 -- they may transfer to any receiver whose `WhitelistId` is in their
 -- `allowedWhitelists`.
 assertTransfer ::
-     forall a s. (IsComparable a, CompareOpHs a, Typeable a)
+     forall a s. (NiceComparable a, IsComparable a)
   => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
 assertTransfer = do
   dip $ do
@@ -59,7 +59,7 @@ assertTransfer = do
 
 -- | Assert that all users are whitelisted and `unrestricted`, or the issuer
 assertReceivers ::
-     forall a s. (IsComparable a, CompareOpHs a)
+     forall a s. (NiceComparable a, IsComparable a)
   => [a] & Storage a & s :-> ([Operation], Storage a) & s
 assertReceivers = do
   dip $ do
@@ -96,7 +96,7 @@ setIssuer = do
   pair
 
 -- | Assert not equal with an error: @"issuer is not a user"@
-assertNotIssuer :: (CompareOpHs a, Typeable a) => a & a & s :-> a & a & s
+assertNotIssuer :: (NiceComparable a, IsComparable a) => a & a & s :-> a & a & s
 assertNotIssuer = do
   dup
   dip $ do
@@ -107,7 +107,7 @@ assertNotIssuer = do
 -- or implicitly remove by providing `Nothing`
 --
 -- Only admin
-addUser :: forall a. (CompareOpHs a, Typeable a) => Entrypoint (UpdateUserParams a) (Storage a)
+addUser :: forall a. (NiceComparable a, IsComparable a) => Entrypoint (UpdateUserParams a) (Storage a)
 addUser = do
   dip $ do
     unStorage

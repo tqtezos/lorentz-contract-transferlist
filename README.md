@@ -66,6 +66,78 @@ Available commands:
                            contract, given the original contract's parameter
 ```
 
+# Standalone Whitelist Contract
+
+An example initial storage:
+
+```bash
+❯❯❯ stack exec -- lorentz-contract-whitelist Whitelist init --issuer "\"$ALICE_ADDRESS\"" \
+  --whitelists "[]" \
+  --users "[]" \
+  --admin "\"$ALICE_ADDRESS\"" \
+  --initialStorageType 'address'
+
+Pair (Pair "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr" { }) (Pair { } "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr")
+```
+
+To originate the contract:
+
+```bash
+$ tezos-client --wait none originate contract Whitelist \
+  transferring 0 from $ALICE_ADDRESS running \
+  "$(cat contracts/address_whitelist.tz)" \
+  --init "$(stack exec -- lorentz-contract-whitelist Whitelist init --issuer "\"$ALICE_ADDRESS\"" \
+  --whitelists "[]" \
+  --users "[]" \
+  --admin "\"$ALICE_ADDRESS\"" \
+  --initialStorageType 'address')" --burn-cap 2.868
+
+Waiting for the node to be bootstrapped before injection...
+Current head: BKj8GASFzkn3 (timestamp: 2020-04-13T19:57:21-00:00, validation: 2020-04-13T19:57:37-00:00)
+Node is bootstrapped, ready for injecting operations.
+Estimated gas: 77578 units (will add 100 for safety)
+Estimated storage: 2868 bytes added (will add 20 for safety)
+Operation successfully injected in the node.
+Operation hash is 'ooxGu3cE8irRMcvwSwDUNqMKQkyQBuom6Swh1jikznrBisLqVzA'
+NOT waiting for the operation to be included.
+Use command
+  tezos-client wait for ooxGu3cE8irRMcvwSwDUNqMKQkyQBuom6Swh1jikznrBisLqVzA to be included --confirmations 30 --branch BKj8GASFzkn37cVU92mLmMhjLTQwfQpPjQnGTBwNpeSqWiuVYAm
+and/or an external block explorer to make sure that it has been included.
+This sequence of operations was run:
+  Manager signed operations:
+    From: tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm
+    Fee to the baker: ꜩ0.010575
+    Expected counter: 623948
+    Gas limit: 77678
+    Storage limit: 2888 bytes
+    Balance updates:
+      tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm ............. -ꜩ0.010575
+      fees(tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU,166) ... +ꜩ0.010575
+    Origination:
+      From: tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm
+      Credit: ꜩ0
+      Script:
+        { ... }
+        Initial storage:
+          (Pair (Pair "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr" {})
+                (Pair {} "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr"))
+        No delegate for this contract
+        This origination was successfully applied
+        Originated contracts:
+          KT1EYLosB86x6fExJutPA8wDKHqs1NgkHz4P
+        Storage size: 2611 bytes
+        Updated big_maps:
+          New map(1142) of type (big_map nat (pair bool (set nat)))
+          New map(1141) of type (big_map address nat)
+        Paid storage size diff: 2611 bytes
+        Consumed gas: 77578
+        Balance updates:
+          tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm ... -ꜩ2.611
+          tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm ... -ꜩ0.257
+
+New contract KT1EYLosB86x6fExJutPA8wDKHqs1NgkHz4P originated.
+Contract memorized as Whitelist.
+```
 
 # Originating the Whitelisted FA1.2 contract
 

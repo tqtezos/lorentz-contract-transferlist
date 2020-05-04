@@ -22,6 +22,8 @@ import Lorentz.Contracts.Whitelist.Impl
 data Parameter a
   -- | Assert that a transfer is valid
   = AssertTransfer !(TransferParams a)
+  -- | Assert that a list of transfers is valid
+  | AssertTransfers ![TransferParams a]
   -- | Assert that a user is whitelisted and `unrestricted`
   | AssertReceiver !a
   -- | Assert that users are whitelisted and `unrestricted`
@@ -60,14 +62,15 @@ whitelistContract = do
   -- since AssertReceiver is just AssertReceivers with a singleton list,
   -- we wrap the three cases into: Either (Either transfer other) receiver
   caseT @(Parameter a)
-    ( #cAssertTransfer /-> left >> left
+    ( #cAssertTransfer /-> dip nil >> cons >> left >> left
+    , #cAssertTransfers /-> left >> left
     , #cAssertReceiver /-> dip nil >> cons >> right
     , #cAssertReceivers /-> right
     , #cOtherParameter /-> right >> left
     )
   ifLeft
     (ifLeft
-      assertTransfer
+      assertTransfers
       (pair >> whitelistManagementContract)
     )
     assertReceivers

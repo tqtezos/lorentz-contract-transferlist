@@ -10,17 +10,57 @@ import Michelson.Typed.Haskell.Value (IsComparable)
 
 import Lorentz.Contracts.Whitelist.Types
 
+
 --------------
 -- Entrypoints
 --------------
 
--- | Assert that one user is allowed to transfer to the other.
+
+-- | Assert that one user is allowed to transfer to the other,
+-- preserving the storage for additional calls.
 --
 -- The `issuer` is allowed to transfer to anyone.
 --
 -- If the sender's `WhitelistId`'s `OutboundWhitelists` is `unrestricted`,
 -- they may transfer to any receiver whose `WhitelistId` is in their
 -- `allowedWhitelists`.
+assertTransfer_ ::
+     forall a s. (NiceComparable a, IsComparable a)
+  => TransferParams a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
+assertTransfer_ = do
+  unTransferParams
+  swap
+  dip $ do
+    dup
+    car
+  -- issuer & from & transfer & users & whitelists & store
+  stackType @(a & a & (a, a) & Users a & Whitelists & s)
+  dup
+  dip $ do
+    stackType @(a & a & (a, a) & Users a & Whitelists & s)
+    dipN @3 $ do
+      pair
+      dup
+      dip unpair
+      unpair
+    stackType @(a & a & (a, a) & Users a & Whitelists & Users a & Whitelists & s)
+    ifEq
+      (do
+        dropN @3
+      )
+      (do
+        unpair
+        assertUsersWhitelist @a
+        swap
+        dip $ do
+          assertOutboundWhitelists
+          assertUnrestrictedOutboundWhitelists
+        mem
+        stackType @(Bool & Users a & Whitelists & s)
+        assert $ mkMTextUnsafe "outbound not whitelisted"
+      )
+
+-- | Run `assertTransfer_` once
 assertTransfer ::
      forall a s. (NiceComparable a, IsComparable a)
   => TransferParams a & Storage a & s :-> ([Operation], Storage a) & s
@@ -33,28 +73,26 @@ assertTransfer = do
     unpair
     -- issuer & users & whitelists & store
     stackType @(a & Users a & Whitelists & Storage a & s)
-  unTransferParams
-  swap
+  assertTransfer_
+  dropN @3
+  nil
+  pair
+
+-- | `assertTransfer` for a list of `TransferParams`
+assertTransfers ::
+     forall a s. (NiceComparable a, IsComparable a)
+  => [TransferParams a] & Storage a & s :-> ([Operation], Storage a) & s
+assertTransfers = do
   dip $ do
     dup
-    car
-  -- issuer & from & transfer & users & whitelists & store
-  stackType @(a & a & (a, a) & Users a & Whitelists & Storage a & s)
-  ifEq
-    (do
-      dropN @3
-    )
-    (do
-      unpair
-      assertUsersWhitelist @a
-      swap
-      dip $ do
-        assertOutboundWhitelists
-        assertUnrestrictedOutboundWhitelists
-      mem
-      assert $ mkMTextUnsafe "outbound not whitelisted"
-    )
-  nil
+    unStorage
+    unpair
+    dip $ do
+      car
+      dip nil
+    unpair
+  iter (assertTransfer_ @a)
+  dropN @3
   pair
 
 -- | Assert that all users are whitelisted and `unrestricted`, or the issuer

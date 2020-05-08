@@ -283,7 +283,10 @@ assertReceiver = do
     dip dup
     eq
     if_ -- user is issuer
-       drop
+       (do
+         push $ mkMTextUnsafe "issuer not receiver"
+         failWith
+       )
        (do
          dip dup
          assertUserWhitelist

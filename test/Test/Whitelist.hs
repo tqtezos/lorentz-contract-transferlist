@@ -80,6 +80,14 @@ test_AssertTransfer = testGroup "AssertTransfer"
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
   , assertTransfer "Assert transfer from whitelisted user to self (on own whitelist, restricted)" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
+  , assertTransfer "Assert transfer from whitelisted user to other user on same whitelist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on same whitelist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on other whitelist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on other whitelist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [1])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
   ]
 
 assertTransfers :: ()

@@ -29,36 +29,58 @@ assertTransfer_ ::
   => TransferParams a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
 assertTransfer_ = do
   unTransferParams
+  dip $ forcedCoerce_ @a @("issuer" :! a)
+  forcedCoerce_ @(a, a) @("from" :! a, "to" :! a)
   swap
+  stackType @("issuer" :! a & ("from" :! a, "to" :! a) & Users a & Whitelists & s)
   dip $ do
     dup
+    dip $ do
+      dip dup
+      cdr
+      forcedCoerce_ @("to" :! a) @a
+      assertUserWhitelist
+      forcedCoerce_ @WhitelistId @("to" :! WhitelistId)
+    dup
     car
-  -- issuer & from & transfer & users & whitelists & store
-  stackType @(a & a & (a, a) & Users a & Whitelists & s)
+  stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & s)
   dup
   dip $ do
-    stackType @(a & a & (a, a) & Users a & Whitelists & s)
-    dipN @3 $ do
+    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & s)
+    -- dipN @3 $ do
+    dipN @4 $ do
       pair
       dup
       dip unpair
       unpair
-    stackType @(a & a & (a, a) & Users a & Whitelists & Users a & Whitelists & s)
-    ifEq
+    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & Users a & Whitelists & s)
+    dip $ forcedCoerce_ @("from" :! a) @a
+    forcedCoerce_ @("issuer" :! a) @a
+    stackType @(a & a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & Users a & Whitelists & s)
+    ifEq -- 'from' user is issuer
       (do
-        dropN @3
+        dropN @4
       )
       (do
-        unpair
-        assertUsersWhitelist @a
+        car
+        dip $ do
+          swap
+        forcedCoerce_ @("from" :! a) @a
+        assertUserWhitelist
+        forcedCoerce_ @WhitelistId @("from" :! WhitelistId)
         swap
         dip $ do
+          forcedCoerce_ @("from" :! WhitelistId) @WhitelistId
           assertOutboundWhitelists
           assertUnrestrictedOutboundWhitelists
+        forcedCoerce_ @("to" :! WhitelistId) @WhitelistId
         mem
         stackType @(Bool & Users a & Whitelists & s)
         assert $ mkMTextUnsafe "outbound not whitelisted"
       )
+    stackType @(Users a & Whitelists & s)
+  forcedCoerce_ @("issuer" :! a) @a
+
 
 -- | Run `assertTransfer_` once
 assertTransfer ::

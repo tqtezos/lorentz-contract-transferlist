@@ -68,7 +68,7 @@ test_AssertTransfer :: TestTree
 test_AssertTransfer = testGroup "AssertTransfer"
   [ assertTransfer "Assert transfer with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 genesisAddress3 genesisAddress4
-  , assertTransfer "Assert transfer from issuer with no users" shouldSucceed
+  , assertTransfer "Assert transfer from issuer with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 genesisAddress1 genesisAddress1
   , assertTransfer "Assert transfer from admin with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 genesisAddress2 genesisAddress2
@@ -80,6 +80,14 @@ test_AssertTransfer = testGroup "AssertTransfer"
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
   , assertTransfer "Assert transfer from whitelisted user to self (on own whitelist, restricted)" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
+  , assertTransfer "Assert transfer from whitelisted user to other user on same whitelist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on same whitelist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on other whitelist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from whitelisted user to other user on other whitelist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [1])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
   ]
 
 assertTransfers :: ()
@@ -109,11 +117,11 @@ test_AssertTransfers :: TestTree
 test_AssertTransfers = testGroup "AssertTransfers"
   [ assertTransfers "Assert transfer with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress3, genesisAddress4)]
-  , assertTransfers "Assert transfer from issuer with no users" shouldSucceed
+  , assertTransfers "Assert transfer from issuer with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress1, genesisAddress1)]
-  , assertTransfers "Assert transfer from issuer with no users (2x)" shouldSucceed
+  , assertTransfers "Assert transfer from issuer with no users (2x)" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 $ replicate 2 (genesisAddress1, genesisAddress1)
-  , assertTransfers "Assert transfer from issuer with no users (3x)" shouldSucceed
+  , assertTransfers "Assert transfer from issuer with no users (3x)" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 $ replicate 3 (genesisAddress1, genesisAddress1)
   , assertTransfers "Assert transfer from admin with no users" shouldFail
       genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress2, genesisAddress2)]
@@ -157,7 +165,8 @@ test_AssertReceiver = testGroup "AssertReceiver"
         mempty
         genesisAddress2 $ \whitelistContract' -> do
           lCall whitelistContract' $ Whitelist.AssertReceiver genesisAddress1
-          validate . Right $ expectAnySuccess
+          validate . Left $
+            lExpectMichelsonFailed (const True) whitelistContract'
   , testCase "Assert receiver admin with no users" $ do
       withWhitelistContract
         genesisAddress1
@@ -174,7 +183,8 @@ test_AssertReceiver = testGroup "AssertReceiver"
         [(0, (True, []))]
         genesisAddress2 $ \whitelistContract' -> do
           lCall whitelistContract' $ Whitelist.AssertReceiver genesisAddress1
-          validate . Right $ expectAnySuccess
+          validate . Left $
+            lExpectMichelsonFailed (const True) whitelistContract'
   , testCase "Assert receiver on whitelisted user (not on own whitelist)" $ do
       withWhitelistContract
         genesisAddress1
@@ -220,7 +230,8 @@ test_AssertReceivers = testGroup "AssertReceivers"
         mempty
         genesisAddress2 $ \whitelistContract' -> do
           lCall whitelistContract' $ Whitelist.AssertReceivers . return $ genesisAddress1
-          validate . Right $ expectAnySuccess
+          validate . Left $
+            lExpectMichelsonFailed (const True) whitelistContract'
   , testCase "Assert receivers admin with no users" $ do
       withWhitelistContract
         genesisAddress1
@@ -237,7 +248,8 @@ test_AssertReceivers = testGroup "AssertReceivers"
         [(0, (True, []))]
         genesisAddress2 $ \whitelistContract' -> do
           lCall whitelistContract' $ Whitelist.AssertReceivers . return $ genesisAddress1
-          validate . Right $ expectAnySuccess
+          validate . Left $
+            lExpectMichelsonFailed (const True) whitelistContract'
   , testCase "Assert receivers on whitelisted user (not on own whitelist)" $ do
       withWhitelistContract
         genesisAddress1
@@ -274,18 +286,18 @@ test_AssertReceivers = testGroup "AssertReceivers"
   , testCase "Assert receivers with multiple valid" $ do
       withWhitelistContract
         genesisAddress1
-        mempty
-        mempty
+        [(genesisAddress3, 0)]
+        [(0, (True, []))]
         genesisAddress2 $ \whitelistContract' -> do
-          lCall whitelistContract' $ Whitelist.AssertReceivers $ replicate 10 genesisAddress1
+          lCall whitelistContract' $ Whitelist.AssertReceivers $ replicate 10 genesisAddress3
           validate . Right $ expectAnySuccess
   , testCase "Assert receivers with multiple valid and one invalid" $ do
       withWhitelistContract
         genesisAddress1
-        mempty
-        mempty
+        [(genesisAddress3, 0)]
+        [(0, (True, []))]
         genesisAddress2 $ \whitelistContract' -> do
-          lCall whitelistContract' $ Whitelist.AssertReceivers $ replicate 10 genesisAddress1 ++ [genesisAddress3]
+          lCall whitelistContract' $ Whitelist.AssertReceivers $ replicate 10 genesisAddress3 ++ [genesisAddress4]
           validate . Left $
             lExpectMichelsonFailed (const True) whitelistContract'
   ]

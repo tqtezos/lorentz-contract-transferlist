@@ -234,16 +234,6 @@ assertUserWhitelist = do
   userWhitelist
   assertSome $ mkMTextUnsafe "User not on a whitelist"
 
--- | Assert that the users are on whitelists
-assertUsersWhitelist :: (NiceComparable a, IsComparable a)
-  => a & a & Users a & s :-> WhitelistId & WhitelistId & s
-assertUsersWhitelist = do
-  dip $ do
-    dip dup
-    assertUserWhitelist
-    swap
-  assertUserWhitelist
-
 -- | Specialized `update`
 setOutboundWhitelists :: forall s. ()
   => WhitelistId & Maybe OutboundWhitelists & Whitelists & s :-> Whitelists & s
@@ -272,7 +262,7 @@ assertUnrestrictedOutboundWhitelists = do
 -- @
 --  user & issuer & users & whitelists
 -- @
-assertReceiver :: forall a s. (NiceComparable a, IsComparable a)
+assertReceiver :: forall a s. (NiceComparable a, IsComparable a) -- (NiceComparable a) is not actually redundant
   => a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
 assertReceiver = do
   swap
@@ -283,7 +273,10 @@ assertReceiver = do
     dip dup
     eq
     if_ -- user is issuer
-       drop
+       (do
+         push $ mkMTextUnsafe "issuer not receiver"
+         failWith
+       )
        (do
          dip dup
          assertUserWhitelist

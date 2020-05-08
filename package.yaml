@@ -2,7 +2,7 @@
 
 <<: *meta
 name:                lorentz-contract-whitelist
-version:             0.3.0.0
+version:             0.4.0.0
 github:              "tqtezos/lorentz-contract-whitelist"
 license:             BSD3
 author:              "Michael J. Klein TQ Tezos"

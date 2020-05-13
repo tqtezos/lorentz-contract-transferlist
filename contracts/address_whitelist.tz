@@ -1,23 +1,26 @@
 parameter (or (or (pair %assertTransfer address
                                         address)
-                  (address %assertReceiver))
-              (or (list %assertReceivers address)
-                  (or (or (or (address %setIssuer)
-                              (pair %addUser address
-                                             (option nat)))
-                          (or (pair %setWhitelistOutbound nat
-                                                          (option (pair bool
-                                                                        (set nat))))
-                              (address %setAdmin)))
-                      (or (or (pair %getIssuer unit
-                                               (contract address))
-                              (pair %getUser address
-                                             (contract (option nat))))
-                          (or (pair %getWhitelist nat
-                                                  (contract (option (pair bool
-                                                                          (set nat)))))
-                              (pair %getAdmin unit
-                                              (contract address)))))));
+                  (list %assertTransfers (pair address
+                                               address)))
+              (or (address %assertReceiver)
+                  (or (list %assertReceivers address)
+                      (or (or (or (address %setIssuer)
+                                  (pair %addUser address
+                                                 (option nat)))
+                              (or (pair %setWhitelistOutbound nat
+                                                              (option (pair bool
+                                                                            (set nat))))
+                                  (address %setAdmin)))
+                          (or (or (pair %getIssuer unit
+                                                   (contract address))
+                                  (pair %getUser address
+                                                 (contract (option nat))))
+                              (or (pair %getWhitelist nat
+                                                      (contract (option (pair 
+                                                                              bool
+                                                                              (set nat)))))
+                                  (pair %getAdmin unit
+                                                  (contract address))))))));
 storage (pair (pair address
                     (big_map address
                              nat))
@@ -25,61 +28,78 @@ storage (pair (pair address
                              (pair bool
                                    (set nat)))
                     address));
-code { CAST (pair (or (or (pair address address) address) (or (list address) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address))))))) (pair (pair address (big_map address nat)) (pair (big_map nat (pair bool (set nat))) address)));
+code { CAST (pair (or (or (pair address address) (list (pair address address))) (or address (or (list address) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))))))) (pair (pair address (big_map address nat)) (pair (big_map nat (pair bool (set nat))) address)));
        DUP;
        CAR;
        DIP { CDR };
-       IF_LEFT { IF_LEFT { LEFT (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))));
-                           LEFT (list address) }
-                         { DIP { NIL address };
+       IF_LEFT { IF_LEFT { DIP { NIL (pair address address) };
                            CONS;
-                           RIGHT (or (pair address address) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))))) } }
-               { IF_LEFT { RIGHT (or (pair address address) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))))) }
-                         { RIGHT (pair address address);
-                           LEFT (list address) } };
+                           LEFT (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))));
+                           LEFT (list address) }
+                         { LEFT (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))));
+                           LEFT (list address) } }
+               { IF_LEFT { DIP { NIL address };
+                           CONS;
+                           RIGHT (or (list (pair address address)) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))))) }
+                         { IF_LEFT { RIGHT (or (list (pair address address)) (or (or (or address (pair address (option nat))) (or (pair nat (option (pair bool (set nat)))) address)) (or (or (pair unit (contract address)) (pair address (contract (option nat)))) (or (pair nat (contract (option (pair bool (set nat))))) (pair unit (contract address)))))) }
+                                   { RIGHT (list (pair address address));
+                                     LEFT (list address) } } };
        IF_LEFT { IF_LEFT { DIP { DUP;
                                  DUP;
                                  CAR;
                                  DIP { CDR };
-                                 DIP { CAR };
+                                 DIP { CAR;
+                                       DIP { NIL operation } };
                                  DUP;
                                  CAR;
                                  DIP { CDR } };
-                           SWAP;
-                           DIP { DUP;
-                                 CAR };
-                           COMPARE;
-                           EQ;
-                           IF { DROP 3 }
-                              { DUP;
-                                CAR;
-                                DIP { CDR };
-                                DIP { DIP { DUP };
-                                      GET;
-                                      IF_NONE { PUSH string "User not on a whitelist";
-                                                FAILWITH }
-                                              {  };
-                                      SWAP };
-                                GET;
-                                IF_NONE { PUSH string "User not on a whitelist";
-                                          FAILWITH }
-                                        {  };
-                                SWAP;
-                                DIP { GET;
-                                      IF_NONE { PUSH string "Whitelist does not exist";
-                                                FAILWITH }
-                                              {  };
-                                      DUP;
-                                      CAR;
-                                      DIP { CDR };
-                                      IF {  }
-                                         { PUSH string "outbound restricted";
-                                           FAILWITH } };
-                                MEM;
-                                IF {  }
-                                   { PUSH string "outbound not whitelisted";
-                                     FAILWITH } };
-                           NIL operation;
+                           ITER { DIP {  };
+                                  SWAP;
+                                  DIP { DUP;
+                                        DIP { DIP { DUP };
+                                              CDR;
+                                              GET;
+                                              IF_NONE { PUSH string "User not on a whitelist";
+                                                        FAILWITH }
+                                                      {  } };
+                                        DUP;
+                                        CAR };
+                                  DUP;
+                                  DIP { DIP 4
+                                            { PAIR;
+                                              DUP;
+                                              DIP { DUP;
+                                                    CAR;
+                                                    DIP { CDR } };
+                                              DUP;
+                                              CAR;
+                                              DIP { CDR } };
+                                        DIP {  };
+                                        COMPARE;
+                                        EQ;
+                                        IF { DROP 4 }
+                                           { CAR;
+                                             DIP { SWAP };
+                                             GET;
+                                             IF_NONE { PUSH string "User not on a whitelist";
+                                                       FAILWITH }
+                                                     {  };
+                                             SWAP;
+                                             DIP { GET;
+                                                   IF_NONE { PUSH string "Whitelist does not exist";
+                                                             FAILWITH }
+                                                           {  };
+                                                   DUP;
+                                                   CAR;
+                                                   DIP { CDR };
+                                                   IF {  }
+                                                      { PUSH string "outbound restricted";
+                                                        FAILWITH } };
+                                             MEM;
+                                             IF {  }
+                                                { PUSH string "outbound not whitelisted";
+                                                  FAILWITH } } } };
+                           DROP 3;
                            PAIR }
                          { PAIR;
                            DUP;
@@ -263,7 +283,8 @@ code { CAST (pair (or (or (pair address address) address) (or (list address) (or
                         DIP { DIP { DUP };
                               COMPARE;
                               EQ;
-                              IF { DROP }
+                              IF { PUSH string "issuer not receiver";
+                                   FAILWITH }
                                  { DIP { DUP };
                                    GET;
                                    IF_NONE { PUSH string "User not on a whitelist";

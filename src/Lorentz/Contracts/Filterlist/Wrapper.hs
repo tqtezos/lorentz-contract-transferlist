@@ -1,5 +1,7 @@
 {-# LANGUAGE RebindableSyntax #-}
 
+{-# OPTIONS -Wno-unused-do-bind #-}
+
 module Lorentz.Contracts.Filterlist.Wrapper where
 
 import Prelude hiding ((>>), drop, swap, get)

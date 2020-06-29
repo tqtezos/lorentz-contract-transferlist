@@ -1,5 +1,6 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE DuplicateRecordFields #-}
+
+{-# OPTIONS -Wno-unused-do-bind #-}
 
 module Lorentz.Contracts.Filterlist.Types where
 
@@ -177,7 +178,7 @@ assertSubset msg = do
   iter $ do
     dip dup
     mem
-    assert $ mkMTextUnsafe "missing element"
+    assert msg
   drop
 
 assertSubsetOutboundFilterlists :: OutboundFilterlists & OutboundFilterlists & s :-> s

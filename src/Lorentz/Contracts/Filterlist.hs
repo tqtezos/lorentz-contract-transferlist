@@ -1,6 +1,6 @@
 {-# LANGUAGE RebindableSyntax #-}
 
-module Lorentz.Contracts.Whitelist where
+module Lorentz.Contracts.Filterlist where
 
 import Prelude hiding ((>>), drop, swap, get)
 import GHC.Generics (Generic, Generic1)
@@ -10,8 +10,8 @@ import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
 import Michelson.Typed.Value.Missing ()
 
-import Lorentz.Contracts.Whitelist.Types
-import Lorentz.Contracts.Whitelist.Impl
+import Lorentz.Contracts.Filterlist.Types
+import Lorentz.Contracts.Filterlist.Impl
 
 -- | Parameters are separated into assertions and management/`View`
 -- parameters (`Parameter'`).
@@ -22,7 +22,7 @@ import Lorentz.Contracts.Whitelist.Impl
 data Parameter a
   -- | Assert that a list of transfers is valid
   = AssertTransfers ![TransferParams a]
-  -- | Assert that a user is whitelisted and `unrestricted`
+  -- | Assert that a user is filterlisted and `unrestricted`
   | AssertReceivers ![a]
   -- | Management and `View` parameters
   | OtherParameter !(Parameter' a)
@@ -41,35 +41,35 @@ deriving instance IsoValue a => IsoValue (Parameter a)
 -- | A contract that accepts either one or a batch of `TransferParams`
 -- and throws and error if any transfers are disallowed.
 --
--- Only whitelisted users and the "issuer" may participate in transfers.
--- - The issuer may transfer to any whitelisted user
--- - Each whitelisted user is associated to exactly one whitelist, by `WhitelistId`
--- - Each whitelist has a set of outbound whitelists that it may transfer to
--- - A whitelist may be restricted, i.e. its set of outbound whitelists is "empty"
+-- Only filterlisted users and the "issuer" may participate in transfers.
+-- - The issuer may transfer to any filterlisted user
+-- - Each filterlisted user is associated to exactly one filterlist, by `FilterlistId`
+-- - Each filterlist has a set of outbound filterlists that it may transfer to
+-- - A filterlist may be restricted, i.e. its set of outbound filterlists is "empty"
 --  * We store both @(`unrestricted` :: `Bool`)@ and
---    a set of `WhitelistId`'s so that restriction may be easily toggled
--- - A user may transfer to any other whitelisted user with a whitelist in their whitelist's outbound list
+--    a set of `FilterlistId`'s so that restriction may be easily toggled
+-- - A user may transfer to any other filterlisted user with a filterlist in their filterlist's outbound list
 --
 -- See `Parameter` and `Storage` for more detail.
-whitelistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+filterlistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
   => ContractCode (Parameter a) (Storage a)
-whitelistContract = do
+filterlistContract = do
   unpair
   caseT @(Parameter a)
     ( #cAssertTransfers /-> assertTransfers
     , #cAssertReceivers /-> assertReceivers
-    , #cOtherParameter /-> pair >> whitelistManagementContract
+    , #cOtherParameter /-> pair >> filterlistManagementContract
     )
 
--- | Management parameters for the `whitelistContract`. See `Parameter'`.
-whitelistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+-- | Management parameters for the `filterlistContract`. See `Parameter'`.
+filterlistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
   => ContractCode (Parameter' a) (Storage a)
-whitelistManagementContract = do
+filterlistManagementContract = do
   unpair
   caseT @(Parameter' a)
     ( #cSetIssuer /-> setIssuer
     , #cUpdateUser /-> updateUser
-    , #cSetWhitelistOutbound /-> setWhitelistOutbound
+    , #cSetFilterlistOutbound /-> setFilterlistOutbound
     , #cSetAdmin /-> setAdmin
     , #cGetIssuer /-> getIssuer
     , #cGetUser /-> getUser

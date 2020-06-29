@@ -1,6 +1,6 @@
 {-# OPTIONS -Wno-partial-fields -Wno-orphans #-}
 
-module Lorentz.Contracts.Whitelist.CmdLnArgs where
+module Lorentz.Contracts.Filterlist.CmdLnArgs where
 
 import Control.Applicative
 import Text.Show (Show(..))
@@ -31,17 +31,17 @@ import qualified Data.Set as Set
 
 import Michelson.Typed.Scope.Missing
 import Michelson.Typed.Value.Missing ()
-import Lorentz.Contracts.Whitelist.Parsers
+import Lorentz.Contracts.Filterlist.Parsers
 import Lorentz.Contracts.SomeContractParam
 import Lorentz.Contracts.SomeContractStorage
-import qualified Lorentz.Contracts.Whitelist as Whitelist
-import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
-import Lorentz.Contracts.Whitelist.Types
+import qualified Lorentz.Contracts.Filterlist as Filterlist
+import qualified Lorentz.Contracts.Filterlist.Types as Filterlist
+import Lorentz.Contracts.Filterlist.Types
   ( View_
-  , WhitelistId
-  , WhitelistOutboundParams(..)
+  , FilterlistId
+  , FilterlistOutboundParams(..)
   )
-import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
+import qualified Lorentz.Contracts.Filterlist.Wrapper as Wrapper
 
 assertIsAddress ::
      forall t. Typeable t
@@ -87,27 +87,27 @@ assertIsComparable f =
     _ -> error . fromString $
       unwords ["assertIsComparable:", show (fromSing (sing @t)), "is not of the form: TC _"]
 
--- | Some `Whitelist.Storage` with a `KnownValue` constraint
+-- | Some `Filterlist.Storage` with a `KnownValue` constraint
 data SomeStorage where
   SomeStorage :: (KnownValue (Value a))
-    => Whitelist.Storage (Value a)
+    => Filterlist.Storage (Value a)
     -> SomeStorage
 
 -- | Run `SomeStorage`
-fromSomeStorage :: forall b. SomeStorage -> (forall a. (KnownValue (Value a)) => Whitelist.Storage (Value a) -> b) -> b
+fromSomeStorage :: forall b. SomeStorage -> (forall a. (KnownValue (Value a)) => Filterlist.Storage (Value a) -> b) -> b
 fromSomeStorage (SomeStorage xs) f = f xs
 
--- | Some `Whitelist.TransferParams` with a `NicePrintedValue` constraint
+-- | Some `Filterlist.TransferParams` with a `NicePrintedValue` constraint
 data SomeTransferParams where
   SomeTransferParams :: (NicePrintedValue (Value a))
-    => Whitelist.TransferParams (Value a)
+    => Filterlist.TransferParams (Value a)
     -> SomeTransferParams
 
 -- | Run `SomeTransferParams`
 fromSomeTransferParams ::
      forall b.
      SomeTransferParams
-  -> (forall a. (NicePrintedValue (Value a)) => Whitelist.TransferParams (Value a) -> b)
+  -> (forall a. (NicePrintedValue (Value a)) => Filterlist.TransferParams (Value a) -> b)
   -> b
 fromSomeTransferParams (SomeTransferParams xs) f = f xs
 
@@ -129,11 +129,11 @@ data CmdLnArgs
       }
   | UpdateUser
       { newUser :: !SomeContractParam
-      , newUserWhitelistId :: !(Maybe WhitelistId)
+      , newUserFilterlistId :: !(Maybe FilterlistId)
       , wrapped :: !Bool
       }
-  | SetWhitelistOutbound
-      { whitelistOutboundParams :: !WhitelistOutboundParams
+  | SetFilterlistOutbound
+      { filterlistOutboundParams :: !FilterlistOutboundParams
       , wrapped :: !Bool
       }
   | SetAdmin
@@ -145,11 +145,11 @@ data CmdLnArgs
       , wrapped :: !Bool
       }
   | GetUser
-      { viewUser :: !(View Address (Maybe WhitelistId))
+      { viewUser :: !(View Address (Maybe FilterlistId))
       , wrapped :: !Bool
       }
   | AssertFilterlist
-      { assertFilterlist :: !Whitelist.AssertFilterlistParams
+      { assertFilterlist :: !Filterlist.AssertFilterlistParams
       , wrapped :: !Bool
       }
   | GetAdmin
@@ -167,35 +167,35 @@ parseList' _ = Opt.auto
 parseMaybe :: Alternative f => f a -> f (Maybe a)
 parseMaybe p = fmap Just p <|> pure Nothing
 
--- | Parse `Whitelist.Storage`
-parseStorage :: forall a. (Ord a, Read a) => (String -> Opt.Parser a) -> Opt.Parser (Whitelist.Storage a)
+-- | Parse `Filterlist.Storage`
+parseStorage :: forall a. (Ord a, Read a) => (String -> Opt.Parser a) -> Opt.Parser (Filterlist.Storage a)
 parseStorage p =
-  (Whitelist.Storage <$>
+  (Filterlist.Storage <$>
     p "issuer" <*>
     parseUsers <*>
-    parseWhitelists <*>
+    parseFilterlists <*>
     parseAddress "admin"
   )
   where
-    parseUsers :: Opt.Parser (Whitelist.Users a)
-    parseUsers = fmap Whitelist.mkUsers $
+    parseUsers :: Opt.Parser (Filterlist.Users a)
+    parseUsers = fmap Filterlist.mkUsers $
       Opt.option (parseList' Opt.auto) $
         mconcat
          [ Opt.long "users"
-         , Opt.metavar "Map USER (Maybe WhitelistId)"
-         , Opt.help $ "User Whitelists: [(User, Whitelist ID) or Nothing]"
+         , Opt.metavar "Map USER (Maybe FilterlistId)"
+         , Opt.help $ "User Filterlists: [(User, Filterlist ID) or Nothing]"
          ]
 
-    parseWhitelists :: Opt.Parser (Whitelist.Whitelists)
-    parseWhitelists = fmap Whitelist.mkWhitelists $
+    parseFilterlists :: Opt.Parser (Filterlist.Filterlists)
+    parseFilterlists = fmap Filterlist.mkFilterlists $
       Opt.option
         (parseList' $
           tripleToDouble <$> Opt.auto
         ) $
         mconcat
-         [ Opt.long "whitelists"
-         , Opt.metavar "Whitelists and their allowed outbound Whitelists"
-         , Opt.help $ "Whitelists: Whitelist ID, Restricted, Allowed outbound Whitelist IDs"
+         [ Opt.long "filterlists"
+         , Opt.metavar "Filterlists and their allowed outbound Filterlists"
+         , Opt.help $ "Filterlists: Filterlist ID, Restricted, Allowed outbound Filterlist IDs"
          ]
       where
         tripleToDouble :: forall a' b c. (a', b, c) -> (a', (b, c))
@@ -216,7 +216,7 @@ parseSomeStorage name =
             (parseTypeCheckValue @t)
             name
             str
-    in SomeStorage $ Whitelist.mapStorage (parseTypeCheck . T.pack) someStorage'
+    in SomeStorage $ Filterlist.mapStorage (parseTypeCheck . T.pack) someStorage'
   ) <$>
   parseSomeT name <*>
   parseStorage parseString
@@ -248,14 +248,14 @@ parseSomeTransferParams =
                                    parsedTo
                                )
      in SomeTransferParams $
-        Whitelist.TransferParams fromVal' toVal' -- param (st, NStar) (Dict, Dict)
+        Filterlist.TransferParams fromVal' toVal' -- param (st, NStar) (Dict, Dict)
   ) <$>
   parseSomeT "user" <*>
   parseString "from" <*>
   parseString "to"
   where
     name :: IsString str => str
-    name = "WhitelistContract"
+    name = "FilterlistContract"
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
@@ -266,7 +266,7 @@ argParser = Opt.hsubparser $ mconcat
   , assertReceiversSubCmd
   , setIssuerSubCmd
   , updateUserSubCmd
-  , setWhitelistOutboundSubCmd
+  , setFilterlistOutboundSubCmd
   , setAdminSubCmd
   , getIssuerSubCmd
   , getUserSubCmd
@@ -283,7 +283,7 @@ argParser = Opt.hsubparser $ mconcat
     printSubCmd =
       mkCommandParser "print"
       (Print <$> parseSomeT "value" <*> outputOptions <*> onelineOption)
-      "Dump the Whitelist contract in form of Michelson code"
+      "Dump the Filterlist contract in form of Michelson code"
 
     initSubCmd =
       mkCommandParser "init"
@@ -291,18 +291,18 @@ argParser = Opt.hsubparser $ mconcat
         parseSomeStorage "initialStorage" <*>
         parseMaybe (parseSomeContractStorage "initialWrappedStorage")
       )
-      ("Initial storage for the (wrapped) Whitelist contract: " <>
+      ("Initial storage for the (wrapped) Filterlist contract: " <>
       "pass 'initialWrappedStorage' for the wrapped version")
 
     -- assertTransferSubCmd =
     --   mkCommandParser "AssertTransfer"
     --   (AssertTransfer <$> parseSomeTransferParams)
-    --   "Generate the parameter for the Whitelist contract: AssertTransfer"
+    --   "Generate the parameter for the Filterlist contract: AssertTransfer"
 
     -- assertReceiverSubCmd =
     --   mkCommandParser "AssertReceiver"
     --   (AssertReceiver <$> parseAddress "receiver")
-    --   "Generate the parameter for the Whitelist contract: AssertReceiver"
+    --   "Generate the parameter for the Filterlist contract: AssertReceiver"
 
     assertReceiversSubCmd =
       mkCommandParser "AssertReceivers"
@@ -312,12 +312,12 @@ argParser = Opt.hsubparser $ mconcat
           (mconcat
             [ Opt.long "receivers"
             , Opt.metavar "[Address]"
-            , Opt.help $ "Assert that all users are whitelisted and " <>
-                "not blacklisted, or the issuer"
+            , Opt.help $ "Assert that all users are filterlisted and " <>
+                "not blocklisted, or the issuer"
             ]
           )
       )
-      "Generate the parameter for the Whitelist contract: AssertReceivers"
+      "Generate the parameter for the Filterlist contract: AssertReceivers"
 
     setIssuerSubCmd =
       mkCommandParser "SetIssuer"
@@ -325,37 +325,37 @@ argParser = Opt.hsubparser $ mconcat
         parseSomeContractParam "newIssuer" <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: SetIssuer"
+      "Generate the (wrapped) parameter for the Filterlist contract: SetIssuer"
 
     updateUserSubCmd =
       mkCommandParser "UpdateUser"
       (UpdateUser <$>
         parseSomeContractParam "newUser" <*>
-        parseMaybe (parseNatural "newUserWhitelistId") <*>
+        parseMaybe (parseNatural "newUserFilterlistId") <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: UpdateUser"
+      "Generate the (wrapped) parameter for the Filterlist contract: UpdateUser"
 
-    setWhitelistOutboundSubCmd =
-      mkCommandParser "SetWhitelistOutbound"
-      (SetWhitelistOutbound <$>
-        (WhitelistOutboundParams <$>
-          parseNatural "whitelistId" <*>
-          (parseMaybe (Whitelist.mkOutboundWhitelists <$>
+    setFilterlistOutboundSubCmd =
+      mkCommandParser "SetFilterlistOutbound"
+      (SetFilterlistOutbound <$>
+        (FilterlistOutboundParams <$>
+          parseNatural "filterlistId" <*>
+          (parseMaybe (Filterlist.mkOutboundFilterlists <$>
             parseBool "restricted" <*>
             Opt.option
               (parseList' Opt.auto)
               (mconcat
-                [ Opt.long "outboundWhitelist"
+                [ Opt.long "outboundFilterlist"
                 , Opt.metavar "[Natural]"
-                , Opt.help "List of allowed outbound whitelists"
+                , Opt.help "List of allowed outbound filterlists"
                 ]
               )
           ))
         ) <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: SetWhitelistOutbound"
+      "Generate the (wrapped) parameter for the Filterlist contract: SetFilterlistOutbound"
 
     setAdminSubCmd =
       mkCommandParser "SetAdmin"
@@ -363,7 +363,7 @@ argParser = Opt.hsubparser $ mconcat
         parseAddress "admin" <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: SetAdmin"
+      "Generate the (wrapped) parameter for the Filterlist contract: SetAdmin"
 
     getIssuerSubCmd =
       mkCommandParser "GetIssuer"
@@ -371,28 +371,28 @@ argParser = Opt.hsubparser $ mconcat
         parseView_ (Proxy @Address) <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: GetIssuer"
+      "Generate the (wrapped) parameter for the Filterlist contract: GetIssuer"
 
     getUserSubCmd =
       mkCommandParser "GetUser"
       (GetUser <$>
-        parseView @Address @(Maybe Whitelist.WhitelistId) (parseAddress "user") <*> -- (parseSomeContractParam "user")
+        parseView @Address @(Maybe Filterlist.FilterlistId) (parseAddress "user") <*> -- (parseSomeContractParam "user")
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: GetUser"
+      "Generate the (wrapped) parameter for the Filterlist contract: GetUser"
 
     assertFilterlistSubCmd =
       mkCommandParser "AssertFilterlist"
       (AssertFilterlist <$>
-        (Whitelist.AssertFilterlistParams <$>
+        (Filterlist.AssertFilterlistParams <$>
           parseNatural "filterlistId" <*>
-          parseMaybe (Whitelist.OutboundWhitelists <$>
+          parseMaybe (Filterlist.OutboundFilterlists <$>
             parseBool "unrestricted" <*>
-            (Set.fromList <$> parseNaturals "allowedWhitelists")
+            (Set.fromList <$> parseNaturals "allowedFilterlists")
         )) <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: AssertFilterlist"
+      "Generate the (wrapped) parameter for the Filterlist contract: AssertFilterlist"
 
     getAdminSubCmd =
       mkCommandParser "GetAdmin"
@@ -400,18 +400,18 @@ argParser = Opt.hsubparser $ mconcat
         parseView_ (Proxy @Address) <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: GetAdmin"
+      "Generate the (wrapped) parameter for the Filterlist contract: GetAdmin"
 
     wrappedParamSubCmd =
       mkCommandParser "WrappedParam"
       (WrappedParam <$> parseSomeContractParam "wrappedParam")
-      ("Generate a wrapped parameter for the Whitelist contract, given the " <>
+      ("Generate a wrapped parameter for the Filterlist contract, given the " <>
       "original contract's parameter")
 
 infoMod :: Opt.InfoMod CmdLnArgs
 infoMod = mconcat
   [ Opt.fullDesc
-  , Opt.progDesc "Whitelist contract CLI interface"
+  , Opt.progDesc "Filterlist contract CLI interface"
   ]
 
 runCmdLnArgs :: CmdLnArgs -> IO ()
@@ -425,13 +425,13 @@ runCmdLnArgs = \case
     -- assertIsComparable @t $
     -- withDict (compareOpCT @(ToCT (Value t))) $
     maybe TL.putStrLn writeFileUtf8 mOutput $
-    printLorentzContract forceOneLine (Whitelist.whitelistContract @Address) -- (Value t))
+    printLorentzContract forceOneLine (Filterlist.filterlistContract @Address) -- (Value t))
   Init {..} ->
-    fromSomeStorage initialStorage $ \(initialStorage' :: Whitelist.Storage (Value s)) ->
+    fromSomeStorage initialStorage $ \(initialStorage' :: Filterlist.Storage (Value s)) ->
       assertIsComparable @s $
       case initialWrappedStorage of
         Nothing ->
-          TL.putStrLn . printLorentzValue @(Whitelist.Storage (Value s)) forceSingleLine $
+          TL.putStrLn . printLorentzValue @(Filterlist.Storage (Value s)) forceSingleLine $
           initialStorage'
         Just initialWrappedStorage' ->
           fromSomeContractStorage initialWrappedStorage' $ \(initialWrappedStorage'' :: Value t) ->
@@ -444,12 +444,12 @@ runCmdLnArgs = \case
             initialWrappedStorage''
             initialStorage'
   -- AssertTransfer {..} ->
-  --   fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Whitelist.TransferParams (Value t)) ->
+  --   fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Filterlist.TransferParams (Value t)) ->
   --   TL.putStrLn . printLorentzValue forceSingleLine $
-  --   Whitelist.AssertTransfer assertTransferParams'
+  --   Filterlist.AssertTransfer assertTransferParams'
   AssertReceivers {..} ->
     TL.putStrLn . printLorentzValue forceSingleLine $
-    Whitelist.AssertReceivers receivers
+    Filterlist.AssertReceivers receivers
   SetIssuer {..} ->
     fromSomeContractParam newIssuer $ \(newIssuer' :: Value t) ->
       let st = sing @t in
@@ -458,12 +458,12 @@ runCmdLnArgs = \case
       if wrapped
          then
            TL.putStrLn . printLorentzValue @(Wrapper.Parameter () (Value t)) forceSingleLine $
-           Wrapper.WhitelistParameter $
-           Whitelist.SetIssuer newIssuer'
+           Wrapper.FilterlistParameter $
+           Filterlist.SetIssuer newIssuer'
          else
-           TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
-           Whitelist.OtherParameter $
-           Whitelist.SetIssuer newIssuer'
+           TL.putStrLn . printLorentzValue @(Filterlist.Parameter (Value t)) forceSingleLine $
+           Filterlist.OtherParameter $
+           Filterlist.SetIssuer newIssuer'
   UpdateUser {..} ->
     fromSomeContractParam newUser $ \(newUser' :: Value t) ->
       let st = sing @t in
@@ -472,44 +472,44 @@ runCmdLnArgs = \case
       if wrapped
          then
            TL.putStrLn . printLorentzValue @(Wrapper.Parameter () (Value t)) forceSingleLine $
-           Wrapper.WhitelistParameter $
-           Whitelist.UpdateUser $
-           Whitelist.UpdateUserParams newUser' newUserWhitelistId
+           Wrapper.FilterlistParameter $
+           Filterlist.UpdateUser $
+           Filterlist.UpdateUserParams newUser' newUserFilterlistId
          else
-           TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
-           Whitelist.OtherParameter $
-           Whitelist.UpdateUser $
-           Whitelist.UpdateUserParams newUser' newUserWhitelistId
-  SetWhitelistOutbound {..} ->
+           TL.putStrLn . printLorentzValue @(Filterlist.Parameter (Value t)) forceSingleLine $
+           Filterlist.OtherParameter $
+           Filterlist.UpdateUser $
+           Filterlist.UpdateUserParams newUser' newUserFilterlistId
+  SetFilterlistOutbound {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
-         Wrapper.WhitelistParameter $
-         Whitelist.SetWhitelistOutbound whitelistOutboundParams
+         Wrapper.FilterlistParameter $
+         Filterlist.SetFilterlistOutbound filterlistOutboundParams
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
-         Whitelist.OtherParameter $
-         Whitelist.SetWhitelistOutbound whitelistOutboundParams
+         TL.putStrLn . printLorentzValue @(Filterlist.Parameter ()) forceSingleLine $
+         Filterlist.OtherParameter $
+         Filterlist.SetFilterlistOutbound filterlistOutboundParams
   SetAdmin {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
-         Wrapper.WhitelistParameter $
-         Whitelist.SetAdmin admin
+         Wrapper.FilterlistParameter $
+         Filterlist.SetAdmin admin
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
-         Whitelist.OtherParameter $
-         Whitelist.SetAdmin admin
+         TL.putStrLn . printLorentzValue @(Filterlist.Parameter ()) forceSingleLine $
+         Filterlist.OtherParameter $
+         Filterlist.SetAdmin admin
   GetIssuer {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () Address) forceSingleLine $
-         Wrapper.WhitelistParameter $
-         Whitelist.GetIssuer viewIssuer
+         Wrapper.FilterlistParameter $
+         Filterlist.GetIssuer viewIssuer
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter Address) forceSingleLine $
-         Whitelist.OtherParameter $
-         Whitelist.GetIssuer viewIssuer
+         TL.putStrLn . printLorentzValue @(Filterlist.Parameter Address) forceSingleLine $
+         Filterlist.OtherParameter $
+         Filterlist.GetIssuer viewIssuer
   GetUser {..} ->
     case viewUser of
       View viewParam addr' ->
@@ -518,32 +518,32 @@ runCmdLnArgs = \case
            in if wrapped
                  then
                    TL.putStrLn . printLorentzValue @(Wrapper.Parameter () Address) forceSingleLine $
-                   Wrapper.WhitelistParameter $
-                   Whitelist.GetUser viewUser'
+                   Wrapper.FilterlistParameter $
+                   Filterlist.GetUser viewUser'
                  else
-                   TL.putStrLn . printLorentzValue @(Whitelist.Parameter Address) forceSingleLine $
-                   Whitelist.OtherParameter $
-                   Whitelist.GetUser viewUser'
+                   TL.putStrLn . printLorentzValue @(Filterlist.Parameter Address) forceSingleLine $
+                   Filterlist.OtherParameter $
+                   Filterlist.GetUser viewUser'
   AssertFilterlist {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
-         Wrapper.WhitelistParameter $
-         Whitelist.AssertFilterlist assertFilterlist
+         Wrapper.FilterlistParameter $
+         Filterlist.AssertFilterlist assertFilterlist
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
-         Whitelist.OtherParameter $
-         Whitelist.AssertFilterlist assertFilterlist
+         TL.putStrLn . printLorentzValue @(Filterlist.Parameter ()) forceSingleLine $
+         Filterlist.OtherParameter $
+         Filterlist.AssertFilterlist assertFilterlist
   GetAdmin {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
-         Wrapper.WhitelistParameter $
-         Whitelist.GetAdmin viewAdmin
+         Wrapper.FilterlistParameter $
+         Filterlist.GetAdmin viewAdmin
        else
-         TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
-         Whitelist.OtherParameter $
-         Whitelist.GetAdmin viewAdmin
+         TL.putStrLn . printLorentzValue @(Filterlist.Parameter ()) forceSingleLine $
+         Filterlist.OtherParameter $
+         Filterlist.GetAdmin viewAdmin
   WrappedParam {..} ->
     fromSomeContractParam wrappedParam $ \(wrappedParam' :: Value t) ->
       let st = sing @t in

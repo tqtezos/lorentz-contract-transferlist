@@ -1,6 +1,6 @@
 {-# OPTIONS -Wno-orphans -Wno-missing-export-lists #-}
 
-module Lorentz.Contracts.Whitelist.Parsers where
+module Lorentz.Contracts.Filterlist.Parsers where
 
 import Prelude (FilePath, ($), Natural, error, runReaderT)
 import Data.Char

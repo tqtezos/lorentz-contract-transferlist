@@ -2,7 +2,7 @@
 
 {-# OPTIONS -Wno-unused-do-bind #-}
 
-module Lorentz.Contracts.Whitelist.Impl where
+module Lorentz.Contracts.Filterlist.Impl where
 
 import Prelude hiding ((>>), drop, swap, get)
 
@@ -10,7 +10,7 @@ import Lorentz
 import Michelson.Text
 import Michelson.Typed.Haskell.Value (IsComparable)
 
-import Lorentz.Contracts.Whitelist.Types
+import Lorentz.Contracts.Filterlist.Types
 
 
 --------------
@@ -23,42 +23,42 @@ import Lorentz.Contracts.Whitelist.Types
 --
 -- The `issuer` is allowed to transfer to anyone.
 --
--- If the sender's `WhitelistId`'s `OutboundWhitelists` is `unrestricted`,
--- they may transfer to any receiver whose `WhitelistId` is in their
--- `allowedWhitelists`.
+-- If the sender's `FilterlistId`'s `OutboundFilterlists` is `unrestricted`,
+-- they may transfer to any receiver whose `FilterlistId` is in their
+-- `allowedFilterlists`.
 assertTransfer_ ::
      forall a s. (NiceComparable a, IsComparable a)
-  => TransferParams a & a & Users a & Whitelists & s :-> a & Users a & Whitelists & s
+  => TransferParams a & a & Users a & Filterlists & s :-> a & Users a & Filterlists & s
 assertTransfer_ = do
   unTransferParams
   dip $ forcedCoerce_ @a @("issuer" :! a)
   forcedCoerce_ @(a, a) @("from" :! a, "to" :! a)
   swap
-  stackType @("issuer" :! a & ("from" :! a, "to" :! a) & Users a & Whitelists & s)
+  stackType @("issuer" :! a & ("from" :! a, "to" :! a) & Users a & Filterlists & s)
   dip $ do
     dup
     dip $ do
       dip dup
       cdr
       forcedCoerce_ @("to" :! a) @a
-      assertUserWhitelist
-      forcedCoerce_ @WhitelistId @("to" :! WhitelistId)
+      assertUserFilterlist
+      forcedCoerce_ @FilterlistId @("to" :! FilterlistId)
     dup
     car
-  stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & s)
+  stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & s)
   dup
   dip $ do
-    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & s)
+    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & s)
     -- dipN @3 $ do
     dipN @4 $ do
       pair
       dup
       dip unpair
       unpair
-    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & Users a & Whitelists & s)
+    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & Users a & Filterlists & s)
     dip $ forcedCoerce_ @("from" :! a) @a
     forcedCoerce_ @("issuer" :! a) @a
-    stackType @(a & a & ("from" :! a, "to" :! a) & "to" :! WhitelistId & Users a & Whitelists & Users a & Whitelists & s)
+    stackType @(a & a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & Users a & Filterlists & s)
     ifEq -- 'from' user is issuer
       (do
         dropN @4
@@ -68,19 +68,19 @@ assertTransfer_ = do
         dip $ do
           swap
         forcedCoerce_ @("from" :! a) @a
-        assertUserWhitelist
-        forcedCoerce_ @WhitelistId @("from" :! WhitelistId)
+        assertUserFilterlist
+        forcedCoerce_ @FilterlistId @("from" :! FilterlistId)
         swap
         dip $ do
-          forcedCoerce_ @("from" :! WhitelistId) @WhitelistId
-          assertOutboundWhitelists
-          assertUnrestrictedOutboundWhitelists
-        forcedCoerce_ @("to" :! WhitelistId) @WhitelistId
+          forcedCoerce_ @("from" :! FilterlistId) @FilterlistId
+          assertOutboundFilterlists
+          assertUnrestrictedOutboundFilterlists
+        forcedCoerce_ @("to" :! FilterlistId) @FilterlistId
         mem
-        stackType @(Bool & Users a & Whitelists & s)
-        assert $ mkMTextUnsafe "outbound not whitelisted"
+        stackType @(Bool & Users a & Filterlists & s)
+        assert $ mkMTextUnsafe "outbound not filterlisted"
       )
-    stackType @(Users a & Whitelists & s)
+    stackType @(Users a & Filterlists & s)
   forcedCoerce_ @("issuer" :! a) @a
 
 
@@ -95,8 +95,8 @@ assertTransfer = do
     unpair
     dip car
     unpair
-    -- issuer & users & whitelists & store
-    stackType @(a & Users a & Whitelists & Storage a & s)
+    -- issuer & users & filterlists & store
+    stackType @(a & Users a & Filterlists & Storage a & s)
   assertTransfer_
   dropN @3
   nil
@@ -119,7 +119,7 @@ assertTransfers = do
   dropN @3
   pair
 
--- | Assert that all users are whitelisted and `unrestricted`, or the issuer
+-- | Assert that all users are filterlisted and `unrestricted`, or the issuer
 assertReceivers ::
      forall a s. (NiceComparable a, IsComparable a)
   => [a] & Storage a & s :-> ([Operation], Storage a) & s
@@ -130,7 +130,7 @@ assertReceivers = do
     unpair
     dip car
     unpair
-    stackType @(a & Users a & Whitelists & Storage a & s)
+    stackType @(a & Users a & Filterlists & Storage a & s)
   iter assertReceiver
   dropN @3
   nil
@@ -146,8 +146,8 @@ setIssuer = do
     unpair
     dip $ do
       unpair
-      -- whitelists & admin
-      stackType @(Whitelists & Address & '[])
+      -- filterlists & admin
+      stackType @(Filterlists & Address & '[])
       dip $ assertAdmin
       pair
     cdr
@@ -165,7 +165,7 @@ assertNotIssuer = do
     dip dup
     assertNeq $ mkMTextUnsafe "issuer is not a user"
 
--- | Add/update a user with a particular `WhitelistId`,
+-- | Add/update a user with a particular `FilterlistId`,
 -- or implicitly remove by providing `Nothing`
 --
 -- Only admin
@@ -176,15 +176,15 @@ updateUser = do
     unpair
     dip $ do
       unpair
-      -- whitelists & admin
-      stackType @(Whitelists & Address & '[])
+      -- filterlists & admin
+      stackType @(Filterlists & Address & '[])
       dip $ do
         assertAdmin
       pair
     unpair
   unUpdateUserParams
-  -- user & new_whitelist & issuer & users & cdr store
-  stackType @(a & Maybe WhitelistId & a & Users a & (Whitelists, Address) & '[])
+  -- user & new_filterlist & issuer & users & cdr store
+  stackType @(a & Maybe FilterlistId & a & Users a & (Filterlists, Address) & '[])
   swap
   dip assertNotIssuer
   pair
@@ -192,26 +192,26 @@ updateUser = do
   dip $ do
     unpair
     swap
-    updateUserWhitelist
+    updateUserFilterlist
   pair
   pair
   toStorage
   nil
   pair
 
--- | Set the `WhitelistOutboundParams` for a `WhitelistId`
+-- | Set the `FilterlistOutboundParams` for a `FilterlistId`
 --
 -- Only admin
-setWhitelistOutbound :: forall a. () => Entrypoint WhitelistOutboundParams (Storage a)
-setWhitelistOutbound = do
+setFilterlistOutbound :: forall a. () => Entrypoint FilterlistOutboundParams (Storage a)
+setFilterlistOutbound = do
   dip $ do
     unStorage
     unpair
     swap
     unpair
     dip assertAdmin
-  unWhitelistOutboundParams
-  setOutboundWhitelists
+  unFilterlistOutboundParams
+  setOutboundFilterlists
   pair
   swap
   pair
@@ -254,8 +254,8 @@ getIssuer =
     car
     car
 
--- | Get a user's `WhitelistId`, or `Nothing` if the user is not present
-getUser :: forall a. (IsComparable a) => Entrypoint (View a (Maybe WhitelistId)) (Storage a)
+-- | Get a user's `FilterlistId`, or `Nothing` if the user is not present
+getUser :: forall a. (IsComparable a) => Entrypoint (View a (Maybe FilterlistId)) (Storage a)
 getUser =
   view_ $ do
     unpair
@@ -263,7 +263,7 @@ getUser =
       unStorage
       car
       cdr
-    getUserWhitelist
+    getUserFilterlist
 
 assertFilterlist :: forall a. () => Entrypoint AssertFilterlistParams (Storage a)
 assertFilterlist = do
@@ -276,12 +276,12 @@ assertFilterlist = do
   unpair
   swap
   dip $ do
-    outboundWhitelists
+    outboundFilterlists
   ifNone
     (assertNone $ mkMTextUnsafe "exists")
     (do
       dip . assertSome $ mkMTextUnsafe "doesn't exist"
-      assertSubsetOutboundWhitelists
+      assertSubsetOutboundFilterlists
     )
   nil @Operation
   pair

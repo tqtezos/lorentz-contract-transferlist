@@ -20,21 +20,21 @@ import qualified Options.Applicative as Opt
 import qualified Data.Text.Lazy as TL
 import Text.PrettyPrint.ANSI.Leijen.Internal (Doc, linebreak)
 
-import qualified Lorentz.Contracts.Whitelist.CmdLnArgs as WhitelistCmdLnArgs
-import qualified Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger.CmdLnArgs as WhitelistManagedLedgerCmdLnArgs
+import qualified Lorentz.Contracts.Filterlist.CmdLnArgs as FilterlistCmdLnArgs
+import qualified Lorentz.Contracts.Filterlist.Wrapper.ManagedLedger.CmdLnArgs as FilterlistManagedLedgerCmdLnArgs
 
 -- | Convert to a `Value`, untype, and render
 showValue :: (IsoValue t, SingI (ToT t), HasNoOp (ToT t)) => t -> TL.Text
 showValue = printTypedValue False . toVal
 
 data CmdLnArgs
-  = WhitelistCmdLnArgs { whitelistCmdLnArgs :: WhitelistCmdLnArgs.CmdLnArgs }
-  | WhitelistManagedLedgerCmdLnArgs { whitelistManagedLedgerCmdLnArgs :: WhitelistManagedLedgerCmdLnArgs.CmdLnArgs }
+  = FilterlistCmdLnArgs { filterlistCmdLnArgs :: FilterlistCmdLnArgs.CmdLnArgs }
+  | FilterlistManagedLedgerCmdLnArgs { filterlistManagedLedgerCmdLnArgs :: FilterlistManagedLedgerCmdLnArgs.CmdLnArgs }
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
-  [ Opt.command "Whitelist" $ fmap WhitelistCmdLnArgs $ Opt.info WhitelistCmdLnArgs.argParser WhitelistCmdLnArgs.infoMod
-  , Opt.command "WhitelistManagedLedger" $ fmap WhitelistManagedLedgerCmdLnArgs $ Opt.info WhitelistManagedLedgerCmdLnArgs.argParser WhitelistManagedLedgerCmdLnArgs.infoMod
+  [ Opt.command "Filterlist" $ fmap FilterlistCmdLnArgs $ Opt.info FilterlistCmdLnArgs.argParser FilterlistCmdLnArgs.infoMod
+  , Opt.command "FilterlistManagedLedger" $ fmap FilterlistManagedLedgerCmdLnArgs $ Opt.info FilterlistManagedLedgerCmdLnArgs.argParser FilterlistManagedLedgerCmdLnArgs.infoMod
   ]
   where
 
@@ -78,8 +78,8 @@ main = do
     run :: CmdLnArgs -> IO ()
     run =
       \case
-        WhitelistCmdLnArgs {..} ->
-          WhitelistCmdLnArgs.runCmdLnArgs whitelistCmdLnArgs
-        WhitelistManagedLedgerCmdLnArgs {..} ->
-          WhitelistManagedLedgerCmdLnArgs.runCmdLnArgs whitelistManagedLedgerCmdLnArgs
+        FilterlistCmdLnArgs {..} ->
+          FilterlistCmdLnArgs.runCmdLnArgs filterlistCmdLnArgs
+        FilterlistManagedLedgerCmdLnArgs {..} ->
+          FilterlistManagedLedgerCmdLnArgs.runCmdLnArgs filterlistManagedLedgerCmdLnArgs
 

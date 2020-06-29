@@ -1,6 +1,6 @@
 {-# OPTIONS -Wno-partial-fields -Wno-orphans #-}
 
-module Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger.CmdLnArgs where
+module Lorentz.Contracts.Filterlist.Wrapper.ManagedLedger.CmdLnArgs where
 
 import Lorentz hiding (get)
 import Util.IO
@@ -11,18 +11,18 @@ import qualified Data.Map.Strict as Map
 
 import qualified Lorentz.Contracts.ManagedLedger as ManagedLedger
 
-import Lorentz.Contracts.Whitelist.Parsers
-import qualified Lorentz.Contracts.Whitelist.Wrapper.ManagedLedger as Whitelisted
-import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
-import qualified Lorentz.Contracts.Whitelist.CmdLnArgs as Whitelist
-import qualified Lorentz.Contracts.Whitelist.Wrapper as Wrapper
+import Lorentz.Contracts.Filterlist.Parsers
+import qualified Lorentz.Contracts.Filterlist.Wrapper.ManagedLedger as Filterlisted
+import qualified Lorentz.Contracts.Filterlist.Types as Filterlist
+import qualified Lorentz.Contracts.Filterlist.CmdLnArgs as Filterlist
+import qualified Lorentz.Contracts.Filterlist.Wrapper as Wrapper
 
 instance HasTypeAnn ManagedLedger.Parameter
 
 data CmdLnArgs
   = Print (Maybe FilePath) Bool
   | Init
-      { initialStorage :: !(Whitelist.Storage Address)
+      { initialStorage :: !(Filterlist.Storage Address)
       , managedLedgerAdmin :: !Address
       , balances :: !(Map Address Natural)
       }
@@ -46,7 +46,7 @@ argParser = Opt.hsubparser $ mconcat
     initSubCmd =
       mkCommandParser "init"
       (Init <$>
-        Whitelist.parseStorage parseAddress <*>
+        Filterlist.parseStorage parseAddress <*>
         parseAddress "managedLedgerAdmin" <*>
         Opt.option
           (Map.fromList <$> Opt.auto)
@@ -56,19 +56,19 @@ argParser = Opt.hsubparser $ mconcat
             , Opt.help "The initial balances"
             ])
       )
-      "Initial storage for the Whitelist Wrapped ManagedLedger contract"
+      "Initial storage for the Filterlist Wrapped ManagedLedger contract"
 
 infoMod :: Opt.InfoMod CmdLnArgs
 infoMod = mconcat
   [ Opt.fullDesc
-  , Opt.progDesc "Whitelist Wrapped ManagedLedger contract CLI interface"
+  , Opt.progDesc "Filterlist Wrapped ManagedLedger contract CLI interface"
   ]
 
 runCmdLnArgs :: CmdLnArgs -> IO ()
 runCmdLnArgs = \case
   Print mOutput forceOneLine ->
     maybe TL.putStrLn writeFileUtf8 mOutput $
-    printLorentzContract forceOneLine Whitelisted.whitelistedManagedLedgerContract
+    printLorentzContract forceOneLine Filterlisted.filterlistedManagedLedgerContract
   Init {..} ->
     TL.putStrLn $
     printLorentzValue @(Wrapper.Storage ManagedLedger.Storage Address) forceSingleLine $

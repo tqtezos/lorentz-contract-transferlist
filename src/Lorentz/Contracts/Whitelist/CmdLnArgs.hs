@@ -27,6 +27,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as TL
 import Data.Constraint
 import Data.Singletons
+import qualified Data.Set as Set
 
 import Michelson.Typed.Scope.Missing
 import Michelson.Typed.Value.Missing ()
@@ -36,9 +37,7 @@ import Lorentz.Contracts.SomeContractStorage
 import qualified Lorentz.Contracts.Whitelist as Whitelist
 import qualified Lorentz.Contracts.Whitelist.Types as Whitelist
 import Lorentz.Contracts.Whitelist.Types
-  ( OutboundWhitelists(..)
-  , OutboundWhitelists(..)
-  , View_
+  ( View_
   , WhitelistId
   , WhitelistOutboundParams(..)
   )
@@ -118,12 +117,9 @@ data CmdLnArgs
       { initialStorage :: !SomeStorage
       , initialWrappedStorage :: !(Maybe SomeContractStorage)
       }
-  | AssertTransfer
-      { assertTransferParams :: !SomeTransferParams
-      }
-  | AssertReceiver
-      { receiver :: !Address
-      }
+  -- | AssertTransfer
+  --     { assertTransferParams :: !SomeTransferParams
+  --     }
   | AssertReceivers
       { receivers :: ![Address]
       }
@@ -131,7 +127,7 @@ data CmdLnArgs
       { newIssuer :: !SomeContractParam
       , wrapped :: !Bool
       }
-  | AddUser
+  | UpdateUser
       { newUser :: !SomeContractParam
       , newUserWhitelistId :: !(Maybe WhitelistId)
       , wrapped :: !Bool
@@ -152,8 +148,8 @@ data CmdLnArgs
       { viewUser :: !(View Address (Maybe WhitelistId))
       , wrapped :: !Bool
       }
-  | GetWhitelist
-      { viewWhitelist :: !(View WhitelistId (Maybe OutboundWhitelists))
+  | AssertFilterlist
+      { assertFilterlist :: !Whitelist.AssertFilterlistParams
       , wrapped :: !Bool
       }
   | GetAdmin
@@ -265,16 +261,16 @@ argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
   [ printSubCmd
   , initSubCmd
-  , assertTransferSubCmd
-  , assertReceiverSubCmd
+  -- , assertTransferSubCmd
+  -- , assertReceiverSubCmd
   , assertReceiversSubCmd
   , setIssuerSubCmd
-  , addUserSubCmd
+  , updateUserSubCmd
   , setWhitelistOutboundSubCmd
   , setAdminSubCmd
   , getIssuerSubCmd
   , getUserSubCmd
-  , getWhitelistSubCmd
+  , assertFilterlistSubCmd
   , getAdminSubCmd
   , wrappedParamSubCmd
   ]
@@ -298,15 +294,15 @@ argParser = Opt.hsubparser $ mconcat
       ("Initial storage for the (wrapped) Whitelist contract: " <>
       "pass 'initialWrappedStorage' for the wrapped version")
 
-    assertTransferSubCmd =
-      mkCommandParser "AssertTransfer"
-      (AssertTransfer <$> parseSomeTransferParams)
-      "Generate the parameter for the Whitelist contract: AssertTransfer"
+    -- assertTransferSubCmd =
+    --   mkCommandParser "AssertTransfer"
+    --   (AssertTransfer <$> parseSomeTransferParams)
+    --   "Generate the parameter for the Whitelist contract: AssertTransfer"
 
-    assertReceiverSubCmd =
-      mkCommandParser "AssertReceiver"
-      (AssertReceiver <$> parseAddress "receiver")
-      "Generate the parameter for the Whitelist contract: AssertReceiver"
+    -- assertReceiverSubCmd =
+    --   mkCommandParser "AssertReceiver"
+    --   (AssertReceiver <$> parseAddress "receiver")
+    --   "Generate the parameter for the Whitelist contract: AssertReceiver"
 
     assertReceiversSubCmd =
       mkCommandParser "AssertReceivers"
@@ -331,14 +327,14 @@ argParser = Opt.hsubparser $ mconcat
       )
       "Generate the (wrapped) parameter for the Whitelist contract: SetIssuer"
 
-    addUserSubCmd =
-      mkCommandParser "AddUser"
-      (AddUser <$>
+    updateUserSubCmd =
+      mkCommandParser "UpdateUser"
+      (UpdateUser <$>
         parseSomeContractParam "newUser" <*>
         parseMaybe (parseNatural "newUserWhitelistId") <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: AddUser"
+      "Generate the (wrapped) parameter for the Whitelist contract: UpdateUser"
 
     setWhitelistOutboundSubCmd =
       mkCommandParser "SetWhitelistOutbound"
@@ -385,13 +381,18 @@ argParser = Opt.hsubparser $ mconcat
       )
       "Generate the (wrapped) parameter for the Whitelist contract: GetUser"
 
-    getWhitelistSubCmd =
-      mkCommandParser "GetWhitelist"
-      (GetWhitelist <$>
-        parseView @Natural @(Maybe Whitelist.OutboundWhitelists) (parseNatural "whitelistId") <*>
+    assertFilterlistSubCmd =
+      mkCommandParser "AssertFilterlist"
+      (AssertFilterlist <$>
+        (Whitelist.AssertFilterlistParams <$>
+          parseNatural "filterlistId" <*>
+          parseMaybe (Whitelist.OutboundWhitelists <$>
+            parseBool "unrestricted" <*>
+            (Set.fromList <$> parseNaturals "allowedWhitelists")
+        )) <*>
         parseBool "wrapped"
       )
-      "Generate the (wrapped) parameter for the Whitelist contract: GetWhitelist"
+      "Generate the (wrapped) parameter for the Whitelist contract: AssertFilterlist"
 
     getAdminSubCmd =
       mkCommandParser "GetAdmin"
@@ -442,13 +443,10 @@ runCmdLnArgs = \case
           Wrapper.Storage
             initialWrappedStorage''
             initialStorage'
-  AssertTransfer {..} ->
-    fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Whitelist.TransferParams (Value t)) ->
-    TL.putStrLn . printLorentzValue forceSingleLine $
-    Whitelist.AssertTransfer assertTransferParams'
-  AssertReceiver {..} ->
-    TL.putStrLn . printLorentzValue forceSingleLine $
-    Whitelist.AssertReceiver receiver
+  -- AssertTransfer {..} ->
+  --   fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Whitelist.TransferParams (Value t)) ->
+  --   TL.putStrLn . printLorentzValue forceSingleLine $
+  --   Whitelist.AssertTransfer assertTransferParams'
   AssertReceivers {..} ->
     TL.putStrLn . printLorentzValue forceSingleLine $
     Whitelist.AssertReceivers receivers
@@ -466,7 +464,7 @@ runCmdLnArgs = \case
            TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
            Whitelist.OtherParameter $
            Whitelist.SetIssuer newIssuer'
-  AddUser {..} ->
+  UpdateUser {..} ->
     fromSomeContractParam newUser $ \(newUser' :: Value t) ->
       let st = sing @t in
       withDict (singIT st) $
@@ -475,12 +473,12 @@ runCmdLnArgs = \case
          then
            TL.putStrLn . printLorentzValue @(Wrapper.Parameter () (Value t)) forceSingleLine $
            Wrapper.WhitelistParameter $
-           Whitelist.AddUser $
+           Whitelist.UpdateUser $
            Whitelist.UpdateUserParams newUser' newUserWhitelistId
          else
            TL.putStrLn . printLorentzValue @(Whitelist.Parameter (Value t)) forceSingleLine $
            Whitelist.OtherParameter $
-           Whitelist.AddUser $
+           Whitelist.UpdateUser $
            Whitelist.UpdateUserParams newUser' newUserWhitelistId
   SetWhitelistOutbound {..} ->
     if wrapped
@@ -526,16 +524,16 @@ runCmdLnArgs = \case
                    TL.putStrLn . printLorentzValue @(Whitelist.Parameter Address) forceSingleLine $
                    Whitelist.OtherParameter $
                    Whitelist.GetUser viewUser'
-  GetWhitelist {..} ->
+  AssertFilterlist {..} ->
     if wrapped
        then
          TL.putStrLn . printLorentzValue @(Wrapper.Parameter () ()) forceSingleLine $
          Wrapper.WhitelistParameter $
-         Whitelist.GetWhitelist viewWhitelist
+         Whitelist.AssertFilterlist assertFilterlist
        else
          TL.putStrLn . printLorentzValue @(Whitelist.Parameter ()) forceSingleLine $
          Whitelist.OtherParameter $
-         Whitelist.GetWhitelist viewWhitelist
+         Whitelist.AssertFilterlist assertFilterlist
   GetAdmin {..} ->
     if wrapped
        then

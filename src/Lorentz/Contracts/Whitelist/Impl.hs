@@ -1,5 +1,7 @@
 {-# LANGUAGE RebindableSyntax #-}
 
+{-# OPTIONS -Wno-unused-do-bind #-}
+
 module Lorentz.Contracts.Whitelist.Impl where
 
 import Prelude hiding ((>>), drop, swap, get)
@@ -163,12 +165,12 @@ assertNotIssuer = do
     dip dup
     assertNeq $ mkMTextUnsafe "issuer is not a user"
 
--- | Add a user with a particular `WhitelistId`,
+-- | Add/update a user with a particular `WhitelistId`,
 -- or implicitly remove by providing `Nothing`
 --
 -- Only admin
-addUser :: forall a. (NiceComparable a, IsComparable a) => Entrypoint (UpdateUserParams a) (Storage a)
-addUser = do
+updateUser :: forall a. (NiceComparable a, IsComparable a) => Entrypoint (UpdateUserParams a) (Storage a)
+updateUser = do
   dip $ do
     unStorage
     unpair
@@ -190,7 +192,7 @@ addUser = do
   dip $ do
     unpair
     swap
-    addUserWhitelist
+    updateUserWhitelist
   pair
   pair
   toStorage
@@ -261,18 +263,28 @@ getUser =
       unStorage
       car
       cdr
-    userWhitelist
+    getUserWhitelist
 
--- | Get the `OutboundWhitelists` of a `WhitelistId` or `Nothing` if it's not present
-getWhitelist :: forall a. () => Entrypoint (View WhitelistId (Maybe OutboundWhitelists)) (Storage a)
-getWhitelist =
-  view_ $ do
-    unpair
-    dip $ do
-      unStorage
-      cdr
-      car
+assertFilterlist :: forall a. () => Entrypoint AssertFilterlistParams (Storage a)
+assertFilterlist = do
+  unAssertFilterlistParams
+  dip $ do
+    dup
+    unStorage
+    cdr
+    car
+  unpair
+  swap
+  dip $ do
     outboundWhitelists
+  ifNone
+    (assertNone $ mkMTextUnsafe "exists")
+    (do
+      dip . assertSome $ mkMTextUnsafe "doesn't exist"
+      assertSubsetOutboundWhitelists
+    )
+  nil @Operation
+  pair
 
 -- | Get the admin `Address` of the contract
 getAdmin :: forall a. () => Entrypoint (View_ Address) (Storage a)

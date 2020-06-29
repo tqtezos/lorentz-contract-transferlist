@@ -20,13 +20,9 @@ import Lorentz.Contracts.Whitelist.Impl
 -- while retaining a static type interface for the management/`View`
 -- parameters.
 data Parameter a
-  -- | Assert that a transfer is valid
-  = AssertTransfer !(TransferParams a)
   -- | Assert that a list of transfers is valid
-  | AssertTransfers ![TransferParams a]
+  = AssertTransfers ![TransferParams a]
   -- | Assert that a user is whitelisted and `unrestricted`
-  | AssertReceiver !a
-  -- | Assert that users are whitelisted and `unrestricted`
   | AssertReceivers ![a]
   -- | Management and `View` parameters
   | OtherParameter !(Parameter' a)
@@ -59,21 +55,11 @@ whitelistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
   => ContractCode (Parameter a) (Storage a)
 whitelistContract = do
   unpair
-  -- since AssertReceiver is just AssertReceivers with a singleton list,
-  -- we wrap the three cases into: Either (Either transfer other) receiver
   caseT @(Parameter a)
-    ( #cAssertTransfer /-> dip nil >> cons >> left >> left
-    , #cAssertTransfers /-> left >> left
-    , #cAssertReceiver /-> dip nil >> cons >> right
-    , #cAssertReceivers /-> right
-    , #cOtherParameter /-> right >> left
+    ( #cAssertTransfers /-> assertTransfers
+    , #cAssertReceivers /-> assertReceivers
+    , #cOtherParameter /-> pair >> whitelistManagementContract
     )
-  ifLeft
-    (ifLeft
-      assertTransfers
-      (pair >> whitelistManagementContract)
-    )
-    assertReceivers
 
 -- | Management parameters for the `whitelistContract`. See `Parameter'`.
 whitelistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
@@ -82,12 +68,12 @@ whitelistManagementContract = do
   unpair
   caseT @(Parameter' a)
     ( #cSetIssuer /-> setIssuer
-    , #cAddUser /-> addUser
+    , #cUpdateUser /-> updateUser
     , #cSetWhitelistOutbound /-> setWhitelistOutbound
     , #cSetAdmin /-> setAdmin
     , #cGetIssuer /-> getIssuer
     , #cGetUser /-> getUser
-    , #cGetWhitelist /-> getWhitelist
+    , #cAssertFilterlist /-> assertFilterlist
     , #cGetAdmin /-> getAdmin
     )
 

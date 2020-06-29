@@ -74,8 +74,9 @@ tests:
     - -with-rtsopts=-N
     - -Wno-missing-export-lists
     dependencies:
-    - base
+    # - base
     - morley
+    - morley-prelude
     - lorentz
     - lorentz-contract-whitelist
     - hspec

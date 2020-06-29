@@ -119,6 +119,15 @@ parseNatural name =
     , Opt.help $ "Natural number representing " <> name <> "."
     ]
 
+-- | Parse a list of natural numbers, given its field name
+parseNaturals :: String -> Opt.Parser [Natural]
+parseNaturals name =
+  Opt.option Opt.auto $
+  mconcat
+    [ Opt.long name
+    , Opt.metavar "[NATURAL]"
+    , Opt.help $ "List of Natural numbers representing " <> name <> "."
+    ]
 
 -- | Parse the output `FilePath`
 outputOptions :: Opt.Parser (Maybe FilePath)

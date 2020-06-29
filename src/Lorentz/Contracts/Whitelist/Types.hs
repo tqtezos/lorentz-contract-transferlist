@@ -1,4 +1,5 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Lorentz.Contracts.Whitelist.Types where
 
@@ -63,7 +64,7 @@ data UpdateUserParams a = UpdateUserParams
     user          :: !a
     -- | The new `WhitelistId` for the user,
     -- or `Nothing` to delete the user from the `Whitelists`
-  , updateUserWhitelist :: !(Maybe WhitelistId)
+  , userWhitelist :: !(Maybe WhitelistId)
   }
   deriving  (Generic, Generic1)
 
@@ -82,12 +83,29 @@ deriving instance IsoValue a => IsoValue (UpdateUserParams a)
 instance HasTypeAnn a => HasTypeAnn (UpdateUserParams a)
 
 
+-- data FilterlistContents = FilterlistContents
+--   { unrestricted       :: !Bool
+--   , allowedFilterlists :: !(Set Natural)
+--   }
+--   deriving (Eq, Ord, Read, Show, Generic, IsoValue, HasTypeAnn)
+data AssertFilterlistParams = AssertFilterlistParams
+  { -- | The user to update
+    filterlistId :: !Natural
+    -- | The new `WhitelistId` for the user,
+  , contents :: !(Maybe OutboundWhitelists)
+  }
+  deriving (Eq, Read, Show, Generic, IsoValue, HasTypeAnn)
+
+-- | Unwrap `AssertFilterlistParams`
+unAssertFilterlistParams :: AssertFilterlistParams & s :-> (Natural, Maybe OutboundWhitelists) & s
+unAssertFilterlistParams = forcedCoerce_
+
 -- | Management and `View` parameters
 data Parameter' a
   -- | Set a new issuer (only admin)
   = SetIssuer !a
-  -- | Add a new user,  (only admin)
-  | AddUser !(UpdateUserParams a)
+  -- | Add/update/remove a new user (only admin)
+  | UpdateUser !(UpdateUserParams a)
   -- | Set the `OutboundWhitelists` for a particular `WhitelistId` (only admin)
   --
   -- Note: If you unset the `OutboundWhitelists` for a `WhitelistId`
@@ -103,7 +121,7 @@ data Parameter' a
   | GetUser !(View a (Maybe WhitelistId))
   -- | Get a whitelist's `OutboundWhitelists`,
   -- or `Nothing` if there's no whitelist with that `WhitelistId`
-  | GetWhitelist !(View WhitelistId (Maybe OutboundWhitelists))
+  | AssertFilterlist !AssertFilterlistParams
   -- | Get the admin `Address`
   | GetAdmin !(View_ Address)
   deriving  (Generic)
@@ -153,6 +171,25 @@ instance HasTypeAnn OutboundWhitelists
 -- | Unwrap `OutboundWhitelists`
 unOutboundWhitelists :: OutboundWhitelists & s :-> (Bool, Set WhitelistId) & s
 unOutboundWhitelists = forcedCoerce_
+
+assertSubset :: (IterOpHs (Set a), IsError err) => err -> Set a & Set a & s :-> s
+assertSubset msg = do
+  iter $ do
+    dip dup
+    mem
+    assert $ mkMTextUnsafe "missing element"
+  drop
+
+assertSubsetOutboundWhitelists :: OutboundWhitelists & OutboundWhitelists & s :-> s
+assertSubsetOutboundWhitelists = do
+  unOutboundWhitelists
+  dip $ do
+    unOutboundWhitelists
+    unpair
+  unpair
+  swap
+  dip $ assertEq $ mkMTextUnsafe "unequal unrestricted"
+  assertSubset $ mkMTextUnsafe "unequal sets"
 
 -- | An assignment from `WhitelistId` to outbound permissions.
 type Whitelists = BigMap WhitelistId OutboundWhitelists
@@ -218,20 +255,20 @@ toStorage :: ((a, Users a), (Whitelists, Address)) & s :-> Storage a & s
 toStorage = forcedCoerce_
 
 -- | Specialized `update`
-addUserWhitelist :: forall a s. IsComparable a
+updateUserWhitelist :: forall a s. IsComparable a
   => a & Maybe WhitelistId & Users a & s :-> Users a & s
-addUserWhitelist = update @(Users a)
+updateUserWhitelist = update @(Users a)
 
 -- | Specialized `get`
-userWhitelist :: forall a s. IsComparable a
+getUserWhitelist :: forall a s. IsComparable a
   => a & Users a & s :-> Maybe WhitelistId & s
-userWhitelist = get @(Users a) -- case niceComparableEvi @a of
+getUserWhitelist = get @(Users a) -- case niceComparableEvi @a of
                   -- Sub Dict -> get @(Users a) -- \\ niceComparableEvi @a
 
 -- | Assert that the user is on a whitelist
 assertUserWhitelist :: (NiceComparable a, IsComparable a) => a & Users a & s :-> WhitelistId & s
 assertUserWhitelist = do
-  userWhitelist
+  getUserWhitelist
   assertSome $ mkMTextUnsafe "User not on a whitelist"
 
 -- | Specialized `update`

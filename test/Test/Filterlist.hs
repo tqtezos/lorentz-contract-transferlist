@@ -40,55 +40,55 @@ withFilterlistContract issuer' users' filterlists' admin' callback =
         (toMutez 0)
     callback filterlistContract'
 
--- assertTransfer :: ()
---   => String
---   -> Bool
---   -> Address
---   -> [(Address, Filterlist.FilterlistId)]
---   -> [(Filterlist.FilterlistId, (Bool, [Filterlist.FilterlistId]))]
---   -> Address
---   -> Address
---   -> Address
---   -> TestTree
--- assertTransfer description' shouldSucceed' issuer' users' filterlists' admin' from' to' =
---   testCase description' $
---   withFilterlistContract
---     issuer'
---     users'
---     filterlists'
---     admin' $ \filterlistContract' -> do
---       lCall filterlistContract' . Filterlist.AssertTransfer $ Filterlist.TransferParams from' to'
---       if shouldSucceed'
---          then validate . Right $
---            expectAnySuccess
---          else validate . Left $
---            lExpectMichelsonFailed (const True) filterlistContract'
+assertTransfer :: ()
+  => String
+  -> Bool
+  -> Address
+  -> [(Address, Filterlist.FilterlistId)]
+  -> [(Filterlist.FilterlistId, (Bool, [Filterlist.FilterlistId]))]
+  -> Address
+  -> Address
+  -> Address
+  -> TestTree
+assertTransfer description' shouldSucceed' issuer' users' filterlists' admin' from' to' =
+  testCase description' $
+  withFilterlistContract
+    issuer'
+    users'
+    filterlists'
+    admin' $ \filterlistContract' -> do
+      lCall filterlistContract' . Filterlist.AssertTransfers $ [Filterlist.TransferParams from' [to']]
+      if shouldSucceed'
+         then validate . Right $
+           expectAnySuccess
+         else validate . Left $
+           lExpectMichelsonFailed (const True) filterlistContract'
 
--- test_AssertTransfer :: TestTree
--- test_AssertTransfer = testGroup "AssertTransfer"
---   [ assertTransfer "Assert transfer with no users" shouldFail
---       genesisAddress1 mempty mempty genesisAddress2 genesisAddress3 genesisAddress4
---   , assertTransfer "Assert transfer from issuer with no users" shouldFail
---       genesisAddress1 mempty mempty genesisAddress2 genesisAddress1 genesisAddress1
---   , assertTransfer "Assert transfer from admin with no users" shouldFail
---       genesisAddress1 mempty mempty genesisAddress2 genesisAddress2 genesisAddress2
---   , assertTransfer "Assert transfer from issuer to a user" shouldSucceed
---       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 genesisAddress1 genesisAddress3
---   , assertTransfer "Assert transfer from filterlisted user to self (not on own filterlist)" shouldFail
---       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress3
---   , assertTransfer "Assert transfer from filterlisted user to self (on own filterlist)" shouldSucceed
---       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
---   , assertTransfer "Assert transfer from filterlisted user to self (on own filterlist, restricted)" shouldFail
---       genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
---   , assertTransfer "Assert transfer from filterlisted user to other user on same filterlist (no outbound)" shouldFail
---       genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
---   , assertTransfer "Assert transfer from filterlisted user to other user on same filterlist (with outbound)" shouldSucceed
---       genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress4
---   , assertTransfer "Assert transfer from filterlisted user to other user on other filterlist (no outbound)" shouldFail
---       genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
---   , assertTransfer "Assert transfer from filterlisted user to other user on other filterlist (with outbound)" shouldSucceed
---       genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [1])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
---   ]
+test_AssertTransfer :: TestTree
+test_AssertTransfer = testGroup "AssertTransfer"
+  [ assertTransfer "Assert transfer with no users" shouldFail
+      genesisAddress1 mempty mempty genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from issuer with no users" shouldFail
+      genesisAddress1 mempty mempty genesisAddress2 genesisAddress1 genesisAddress1
+  , assertTransfer "Assert transfer from admin with no users" shouldFail
+      genesisAddress1 mempty mempty genesisAddress2 genesisAddress2 genesisAddress2
+  , assertTransfer "Assert transfer from issuer to a user" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 genesisAddress1 genesisAddress3
+  , assertTransfer "Assert transfer from filterlisted user to self (not on own filterlist)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress3
+  , assertTransfer "Assert transfer from filterlisted user to self (on own filterlist)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
+  , assertTransfer "Assert transfer from filterlisted user to self (on own filterlist, restricted)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 genesisAddress3 genesisAddress3
+  , assertTransfer "Assert transfer from filterlisted user to other user on same filterlist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from filterlisted user to other user on same filterlist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 0)] [(0, (True, [0]))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from filterlisted user to other user on other filterlist (no outbound)" shouldFail
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  , assertTransfer "Assert transfer from filterlisted user to other user on other filterlist (with outbound)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0), (genesisAddress4, 1)] [(0, (True, [1])), (1, (True, []))] genesisAddress2 genesisAddress3 genesisAddress4
+  ]
 
 assertTransfers :: ()
   => String
@@ -133,84 +133,31 @@ test_AssertTransfers = testGroup "AssertTransfers"
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, [genesisAddress3])
   , assertTransfers "Assert transfer from issuer to a user (3x), then from non-user" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, [genesisAddress3]) ++ [(genesisAddress4, [genesisAddress4])]
+  , assertTransfers "Assert transfer from issuer to a user (2x), batched" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ [(genesisAddress1, replicate 2 genesisAddress3)]
+  , assertTransfers "Assert transfer from issuer to a user (3x)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ [(genesisAddress1, replicate 3 genesisAddress3)]
+  , assertTransfers "Assert transfer from issuer to a user (3x), then to non-user" shouldFail
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ [(genesisAddress1, replicate 3 genesisAddress3 ++ [genesisAddress4])]
   , assertTransfers "Assert transfer from filterlisted user to self (not on own filterlist)" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist)" shouldSucceed
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
+  , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (2x)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 [(genesisAddress3, replicate 2 genesisAddress3)]
+  , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x)" shouldSucceed
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 [(genesisAddress3, replicate 3 genesisAddress3)]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (2x)" shouldSucceed
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 2 (genesisAddress3, [genesisAddress3])
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x)" shouldSucceed
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, [genesisAddress3])
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x), then to non-user" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, [genesisAddress3]) ++ [(genesisAddress3, [genesisAddress4])]
+  , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x), then to self and non-user" shouldFail
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, [genesisAddress3]) ++ [(genesisAddress3, [genesisAddress3, genesisAddress4])]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist, restricted)" shouldFail
       genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
   ]
-
--- test_AssertReceiver :: TestTree
--- test_AssertReceiver = testGroup "AssertReceiver"
---   [ testCase "Assert receiver with no users" $ do
---       withFilterlistContract
---         genesisAddress1
---         mempty
---         mempty
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress3
---           validate . Left $
---             lExpectMichelsonFailed (const True) filterlistContract'
---   , testCase "Assert receiver issuer with no users" $ do
---       withFilterlistContract
---         genesisAddress1
---         mempty
---         mempty
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress1
---           validate . Left $
---             lExpectMichelsonFailed (const True) filterlistContract'
---   , testCase "Assert receiver admin with no users" $ do
---       withFilterlistContract
---         genesisAddress1
---         mempty
---         mempty
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress2
---           validate . Left $
---             lExpectMichelsonFailed (const True) filterlistContract'
---   , testCase "Assert receiver issuer with user" $ do
---       withFilterlistContract
---         genesisAddress1
---         [(genesisAddress3, 0)]
---         [(0, (True, []))]
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress1
---           validate . Left $
---             lExpectMichelsonFailed (const True) filterlistContract'
---   , testCase "Assert receiver on filterlisted user (not on own filterlist)" $ do
---       withFilterlistContract
---         genesisAddress1
---         [(genesisAddress3, 0)]
---         [(0, (True, []))]
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress3
---           validate . Right $ expectAnySuccess
---   , testCase "Assert receiver on filterlisted user (on own filterlist)" $ do
---       withFilterlistContract
---         genesisAddress1
---         [(genesisAddress3, 0)]
---         [(0, (True, [0]))]
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress3
---           validate . Right $ expectAnySuccess
---   , testCase "Assert receiver on filterlisted user (on own filterlist, restricted)" $ do
---       withFilterlistContract
---         genesisAddress1
---         [(genesisAddress3, 0)]
---         [(0, (False, [0]))]
---         genesisAddress2 $ \filterlistContract' -> do
---           lCall filterlistContract' $ Filterlist.AssertReceiver genesisAddress3
---           validate . Left $
---             lExpectMichelsonFailed (const True) filterlistContract'
---   ]
 
 test_AssertReceivers :: TestTree
 test_AssertReceivers = testGroup "AssertReceivers"

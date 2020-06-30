@@ -3,6 +3,7 @@
 module Lorentz.Contracts.Filterlist.CmdLnArgs where
 
 import Control.Applicative
+import Data.Traversable
 import Text.Show (Show(..))
 import Data.List
 import Data.Either
@@ -100,14 +101,14 @@ fromSomeStorage (SomeStorage xs) f = f xs
 -- | Some `Filterlist.TransferParams` with a `NicePrintedValue` constraint
 data SomeTransferParams where
   SomeTransferParams :: (NicePrintedValue (Value a))
-    => Filterlist.TransferParams (Value a)
+    => [Filterlist.TransferParams (Value a)]
     -> SomeTransferParams
 
 -- | Run `SomeTransferParams`
 fromSomeTransferParams ::
      forall b.
      SomeTransferParams
-  -> (forall a. (NicePrintedValue (Value a)) => Filterlist.TransferParams (Value a) -> b)
+  -> (forall a. (NicePrintedValue (Value a)) => [Filterlist.TransferParams (Value a)] -> b)
   -> b
 fromSomeTransferParams (SomeTransferParams xs) f = f xs
 
@@ -117,9 +118,9 @@ data CmdLnArgs
       { initialStorage :: !SomeStorage
       , initialWrappedStorage :: !(Maybe SomeContractStorage)
       }
-  -- | AssertTransfer
-  --     { assertTransferParams :: !SomeTransferParams
-  --     }
+  | AssertTransfers
+      { assertTransferParams :: !SomeTransferParams
+      }
   | AssertReceivers
       { receivers :: ![Address]
       }
@@ -221,47 +222,47 @@ parseSomeStorage name =
   parseSomeT name <*>
   parseStorage parseString
 
--- -- | Parse `SomeTransferParams`, see `parseSomeContractParam`
--- parseSomeTransferParams :: Opt.Parser SomeTransferParams
--- parseSomeTransferParams =
---   (\(SomeSing (st :: Sing t)) fromStr toStr ->
---     withDict (singIT st) $
---     withDict (singTypeableT st) $
---     assertOpAbsense @t $
---     assertBigMapAbsense @t $
---     let (parsedFrom, parsedTo) = ( parseNoEnv
---                                      (parseTypeCheckValue @t)
---                                      name
---                                      $ T.pack fromStr
---                                  , parseNoEnv
---                                      (parseTypeCheckValue @t)
---                                      name
---                                      $ T.pack toStr
---                                  )
---      in let (fromVal', toVal') = ( either
---                                    (error . T.pack . show)
---                                    id
---                                    parsedFrom
---                                , either
---                                    (error . T.pack . show)
---                                    id
---                                    parsedTo
---                                )
---      in SomeTransferParams $
---         Filterlist.TransferParams fromVal' toVal' -- param (st, NStar) (Dict, Dict)
---   ) <$>
---   parseSomeT "user" <*>
---   parseString "from" <*>
---   parseString "to"
---   where
---     name :: IsString str => str
---     name = "FilterlistContract"
+-- | Parse `SomeTransferParams`, see `parseSomeContractParam`
+parseSomeTransferParams :: Opt.Parser SomeTransferParams
+parseSomeTransferParams =
+  (\(SomeSing (st :: Sing t)) fromStr toStrs ->
+    withDict (singIT st) $
+    withDict (singTypeableT st) $
+    assertOpAbsense @t $
+    assertBigMapAbsense @t $
+    let (parsedFrom, parsedTo) = ( parseNoEnv
+                                     (parseTypeCheckValue @t)
+                                     name
+                                     $ T.pack fromStr
+                                 , traverse (parseNoEnv
+                                     (parseTypeCheckValue @t)
+                                     name
+                                     . T.pack) toStrs
+                                 )
+     in let (fromVal', toVal') = ( either
+                                   (error . T.pack . show)
+                                   id
+                                   parsedFrom
+                               , either
+                                   (error . T.pack . show)
+                                   id
+                                   parsedTo
+                               )
+     in SomeTransferParams $
+       [Filterlist.TransferParams fromVal' toVal'] -- param (st, NStar) (Dict, Dict)
+  ) <$>
+  parseSomeT "user" <*>
+  parseString "from" <*>
+  parseStrings "to"
+  where
+    name :: IsString str => str
+    name = "FilterlistContract"
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
   [ printSubCmd
   , initSubCmd
-  -- , assertTransferSubCmd
+  , assertTransfersSubCmd
   -- , assertReceiverSubCmd
   , assertReceiversSubCmd
   , setIssuerSubCmd
@@ -294,10 +295,10 @@ argParser = Opt.hsubparser $ mconcat
       ("Initial storage for the (wrapped) Filterlist contract: " <>
       "pass 'initialWrappedStorage' for the wrapped version")
 
-    -- assertTransferSubCmd =
-    --   mkCommandParser "AssertTransfer"
-    --   (AssertTransfer <$> parseSomeTransferParams)
-    --   "Generate the parameter for the Filterlist contract: AssertTransfer"
+    assertTransfersSubCmd =
+      mkCommandParser "AssertTransfers"
+      (AssertTransfers <$> parseSomeTransferParams)
+      "Generate the parameter for the Filterlist contract: AssertTransfers"
 
     -- assertReceiverSubCmd =
     --   mkCommandParser "AssertReceiver"
@@ -443,10 +444,10 @@ runCmdLnArgs = \case
           Wrapper.Storage
             initialWrappedStorage''
             initialStorage'
-  -- AssertTransfer {..} ->
-  --   fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: Filterlist.TransferParams (Value t)) ->
-  --   TL.putStrLn . printLorentzValue forceSingleLine $
-  --   Filterlist.AssertTransfer assertTransferParams'
+  AssertTransfers {..} ->
+    fromSomeTransferParams assertTransferParams $ \(assertTransferParams' :: [Filterlist.TransferParams (Value t)]) ->
+    TL.putStrLn . printLorentzValue forceSingleLine $
+    Filterlist.AssertTransfers assertTransferParams'
   AssertReceivers {..} ->
     TL.putStrLn . printLorentzValue forceSingleLine $
     Filterlist.AssertReceivers receivers

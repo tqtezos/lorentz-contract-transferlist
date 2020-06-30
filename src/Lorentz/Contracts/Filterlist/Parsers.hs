@@ -109,6 +109,14 @@ parseString name = Opt.strOption $ mconcat
   , Opt.help $ "String representing the contract's initial " <> name <> "."
   ]
 
+-- | Parse a list of `String`'s
+parseStrings :: String -> Opt.Parser [String]
+parseStrings name = Opt.option Opt.auto $ mconcat
+  [ Opt.long name
+  , Opt.metavar "[STRING]"
+  , Opt.help $ "List of String's representing " <> name <> "."
+  ]
+
 -- | Parse a natural number argument, given its field name
 parseNatural :: String -> Opt.Parser Natural
 parseNatural name =

@@ -20,8 +20,8 @@ import Michelson.Typed.Haskell.Value (IsComparable)
 data TransferParams a = TransferParams
   { -- | The user sending "tokens"
     from :: !a
-    -- | The user receiving "tokens"
-  , to   :: !a
+    -- | The users receiving "tokens"
+  , tos  :: ![a]
   }
   deriving (Generic, Generic1)
 
@@ -34,11 +34,11 @@ deriving instance IsoValue a => IsoValue (TransferParams a)
 instance HasTypeAnn a => HasTypeAnn (TransferParams a)
 
 -- | Wrap `TransferParams`
-toTransferParams :: (a, a) & s :-> TransferParams a & s
+toTransferParams :: (a, [a]) & s :-> TransferParams a & s
 toTransferParams = forcedCoerce_
 
 -- | Unwrap `TransferParams`
-unTransferParams :: TransferParams a & s :-> (a, a) & s
+unTransferParams :: TransferParams a & s :-> (a, [a]) & s
 unTransferParams = forcedCoerce_
 
 -- | Set the `OutboundFilterlists` for a particular `FilterlistId` (only admin)

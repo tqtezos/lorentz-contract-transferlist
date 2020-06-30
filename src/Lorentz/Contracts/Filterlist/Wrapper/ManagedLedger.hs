@@ -32,7 +32,10 @@ managedLedgerTransferParams = do
     ( #cTransfer /-> do
         forcedCoerce_ @("from" :! Address, "to" :! Address, "value" :! Natural) @(Address, (Address, Natural))
         unpair
-        dip car
+        dip $ do
+          car
+          dip nil
+          cons
         pair
         Filterlist.toTransferParams
         some

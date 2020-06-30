@@ -17,7 +17,6 @@ import Lorentz.Contracts.Filterlist.Types
 -- Entrypoints
 --------------
 
-
 -- | Assert that one user is allowed to transfer to the other,
 -- preserving the storage for additional calls.
 --
@@ -30,59 +29,72 @@ assertTransfer_ ::
      forall a s. (NiceComparable a, IsComparable a)
   => TransferParams a & a & Users a & Filterlists & s :-> a & Users a & Filterlists & s
 assertTransfer_ = do
-  unTransferParams
   dip $ forcedCoerce_ @a @("issuer" :! a)
-  forcedCoerce_ @(a, a) @("from" :! a, "to" :! a)
-  swap
-  stackType @("issuer" :! a & ("from" :! a, "to" :! a) & Users a & Filterlists & s)
-  dip $ do
-    dup
-    dip $ do
-      dip dup
-      cdr
-      forcedCoerce_ @("to" :! a) @a
-      assertUserFilterlist
-      forcedCoerce_ @FilterlistId @("to" :! FilterlistId)
-    dup
-    car
-  stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & s)
+  unTransferParams
+  forcedCoerce_ @(a, [a]) @("from" :! a, "tos" :! [a])
+  stackType @(("from" :! a, "tos" :! [a]) & "issuer" :! a & Users a & Filterlists & s)
+  unpair
+  stackType @("from" :! a & "tos" :! [a] & "issuer" :! a & Users a & Filterlists & s)
+  dig @2
   dup
+  stackType @("issuer" :! a & "issuer" :! a & "from" :! a & "tos" :! [a] & Users a & Filterlists & s)
   dip $ do
-    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & s)
-    -- dipN @3 $ do
-    dipN @4 $ do
-      pair
-      dup
-      dip unpair
-      unpair
-    stackType @("issuer" :! a & "from" :! a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & Users a & Filterlists & s)
-    dip $ forcedCoerce_ @("from" :! a) @a
+    stackType @("issuer" :! a & "from" :! a & "tos" :! [a] & Users a & Filterlists & s)
     forcedCoerce_ @("issuer" :! a) @a
-    stackType @(a & a & ("from" :! a, "to" :! a) & "to" :! FilterlistId & Users a & Filterlists & Users a & Filterlists & s)
-    ifEq -- 'from' user is issuer
+    dip $ do
+      dup
+      forcedCoerce_ @("from" :! a) @a
+    stackType @(a & a & "from" :! a & "tos" :! [a] & Users a & Filterlists & s)
+    ifEq
+      (dropN @2)
       (do
-        dropN @4
-      )
-      (do
-        car
+        stackType @("from" :! a & "tos" :! [a] & Users a & Filterlists & s)
+        dig @2
+        dup
+        stackType @(Users a & Users a & "from" :! a & "tos" :! [a] & Filterlists & s)
         dip $ do
+          stackType @(Users a & "from" :! a & "tos" :! [a] & Filterlists & s)
           swap
-        forcedCoerce_ @("from" :! a) @a
-        assertUserFilterlist
-        forcedCoerce_ @FilterlistId @("from" :! FilterlistId)
-        swap
+          forcedCoerce_ @("from" :! a) @a
+          assertUserFilterlist
+          forcedCoerce_ @FilterlistId @("from" :! FilterlistId)
+          stackType @("from" :! FilterlistId & "tos" :! [a] & Filterlists & s)
+          dig @2
+          dup
+          stackType @(Filterlists & Filterlists & "from" :! FilterlistId & "tos" :! [a] & s)
+          dip $ do
+            stackType @(Filterlists & "from" :! FilterlistId & "tos" :! [a] & s)
+            swap
+            forcedCoerce_ @("from" :! FilterlistId) @FilterlistId
+            assertOutboundFilterlists
+            assertUnrestrictedOutboundFilterlists
+            forcedCoerce_ @(Set FilterlistId) @("from" :! Set FilterlistId)
+            stackType @("from" :! Set FilterlistId & "tos" :! [a] & s)
+        stackType @(Users a & Filterlists & "from" :! Set FilterlistId & "tos" :! [a] & s)
+        dup
         dip $ do
-          forcedCoerce_ @("from" :! FilterlistId) @FilterlistId
-          assertOutboundFilterlists
-          assertUnrestrictedOutboundFilterlists
-        forcedCoerce_ @("to" :! FilterlistId) @FilterlistId
-        mem
-        stackType @(Bool & Users a & Filterlists & s)
-        assert $ mkMTextUnsafe "outbound not filterlisted"
+          stackType @(Users a & Filterlists & "from" :! Set FilterlistId & "tos" :! [a] & s)
+          swap
+          dug @3
+          stackType @(Users a & "from" :! Set FilterlistId & "tos" :! [a] & Filterlists & s)
+          dig @2
+          forcedCoerce_ @("tos" :! [a]) @[a]
+          iter $ do
+            stackType @(a & Users a & "from" :! Set FilterlistId & Filterlists & s)
+            swap
+            dup
+            dip $ do
+              swap
+              stackType @(a & Users a & "from" :! Set FilterlistId & Filterlists & s)
+              assertUserFilterlist
+              dip $ do
+                dup
+                forcedCoerce_ @("from" :! Set FilterlistId) @(Set FilterlistId)
+              mem
+              assert $ mkMTextUnsafe "outbound not filterlisted"
+          dropN @2
       )
-    stackType @(Users a & Filterlists & s)
   forcedCoerce_ @("issuer" :! a) @a
-
 
 -- | Run `assertTransfer_` once
 assertTransfer ::

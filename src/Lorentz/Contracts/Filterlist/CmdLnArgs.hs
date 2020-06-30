@@ -248,7 +248,7 @@ parseSomeTransferParams =
                                    parsedTo
                                )
      in SomeTransferParams $
-        Filterlist.TransferParams fromVal' toVal' -- param (st, NStar) (Dict, Dict)
+        Filterlist.TransferParams fromVal' [toVal'] -- param (st, NStar) (Dict, Dict)
   ) <$>
   parseSomeT "user" <*>
   parseString "from" <*>

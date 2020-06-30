@@ -106,7 +106,7 @@ assertTransfers description' shouldSucceed' issuer' users' filterlists' admin' t
     users'
     filterlists'
     admin' $ \filterlistContract' -> do
-      lCall filterlistContract' $ Filterlist.AssertTransfers $ uncurry Filterlist.TransferParams <$> transfers'
+      lCall filterlistContract' $ Filterlist.AssertTransfers $ uncurry Filterlist.TransferParams . fmap return <$> transfers'
       if shouldSucceed'
          then validate . Right $
            expectAnySuccess

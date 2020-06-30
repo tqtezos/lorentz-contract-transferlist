@@ -221,41 +221,41 @@ parseSomeStorage name =
   parseSomeT name <*>
   parseStorage parseString
 
--- | Parse `SomeTransferParams`, see `parseSomeContractParam`
-parseSomeTransferParams :: Opt.Parser SomeTransferParams
-parseSomeTransferParams =
-  (\(SomeSing (st :: Sing t)) fromStr toStr ->
-    withDict (singIT st) $
-    withDict (singTypeableT st) $
-    assertOpAbsense @t $
-    assertBigMapAbsense @t $
-    let (parsedFrom, parsedTo) = ( parseNoEnv
-                                     (parseTypeCheckValue @t)
-                                     name
-                                     $ T.pack fromStr
-                                 , parseNoEnv
-                                     (parseTypeCheckValue @t)
-                                     name
-                                     $ T.pack toStr
-                                 )
-     in let (fromVal', toVal') = ( either
-                                   (error . T.pack . show)
-                                   id
-                                   parsedFrom
-                               , either
-                                   (error . T.pack . show)
-                                   id
-                                   parsedTo
-                               )
-     in SomeTransferParams $
-        Filterlist.TransferParams fromVal' [toVal'] -- param (st, NStar) (Dict, Dict)
-  ) <$>
-  parseSomeT "user" <*>
-  parseString "from" <*>
-  parseString "to"
-  where
-    name :: IsString str => str
-    name = "FilterlistContract"
+-- -- | Parse `SomeTransferParams`, see `parseSomeContractParam`
+-- parseSomeTransferParams :: Opt.Parser SomeTransferParams
+-- parseSomeTransferParams =
+--   (\(SomeSing (st :: Sing t)) fromStr toStr ->
+--     withDict (singIT st) $
+--     withDict (singTypeableT st) $
+--     assertOpAbsense @t $
+--     assertBigMapAbsense @t $
+--     let (parsedFrom, parsedTo) = ( parseNoEnv
+--                                      (parseTypeCheckValue @t)
+--                                      name
+--                                      $ T.pack fromStr
+--                                  , parseNoEnv
+--                                      (parseTypeCheckValue @t)
+--                                      name
+--                                      $ T.pack toStr
+--                                  )
+--      in let (fromVal', toVal') = ( either
+--                                    (error . T.pack . show)
+--                                    id
+--                                    parsedFrom
+--                                , either
+--                                    (error . T.pack . show)
+--                                    id
+--                                    parsedTo
+--                                )
+--      in SomeTransferParams $
+--         Filterlist.TransferParams fromVal' toVal' -- param (st, NStar) (Dict, Dict)
+--   ) <$>
+--   parseSomeT "user" <*>
+--   parseString "from" <*>
+--   parseString "to"
+--   where
+--     name :: IsString str => str
+--     name = "FilterlistContract"
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat

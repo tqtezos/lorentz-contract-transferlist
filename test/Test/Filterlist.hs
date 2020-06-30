@@ -97,7 +97,7 @@ assertTransfers :: ()
   -> [(Address, Filterlist.FilterlistId)]
   -> [(Filterlist.FilterlistId, (Bool, [Filterlist.FilterlistId]))]
   -> Address
-  -> [(Address, Address)]
+  -> [(Address, [Address])]
   -> TestTree
 assertTransfers description' shouldSucceed' issuer' users' filterlists' admin' transfers' =
   testCase description' $
@@ -106,7 +106,7 @@ assertTransfers description' shouldSucceed' issuer' users' filterlists' admin' t
     users'
     filterlists'
     admin' $ \filterlistContract' -> do
-      lCall filterlistContract' $ Filterlist.AssertTransfers $ uncurry Filterlist.TransferParams . fmap return <$> transfers'
+      lCall filterlistContract' $ Filterlist.AssertTransfers $ uncurry Filterlist.TransferParams <$> transfers'
       if shouldSucceed'
          then validate . Right $
            expectAnySuccess
@@ -116,35 +116,35 @@ assertTransfers description' shouldSucceed' issuer' users' filterlists' admin' t
 test_AssertTransfers :: TestTree
 test_AssertTransfers = testGroup "AssertTransfers"
   [ assertTransfers "Assert transfer with no users" shouldFail
-      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress3, genesisAddress4)]
+      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress3, [genesisAddress4])]
   , assertTransfers "Assert transfer from issuer with no users" shouldFail
-      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress1, genesisAddress1)]
+      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress1, [genesisAddress1])]
   , assertTransfers "Assert transfer from issuer with no users (2x)" shouldFail
-      genesisAddress1 mempty mempty genesisAddress2 $ replicate 2 (genesisAddress1, genesisAddress1)
+      genesisAddress1 mempty mempty genesisAddress2 $ replicate 2 (genesisAddress1, [genesisAddress1])
   , assertTransfers "Assert transfer from issuer with no users (3x)" shouldFail
-      genesisAddress1 mempty mempty genesisAddress2 $ replicate 3 (genesisAddress1, genesisAddress1)
+      genesisAddress1 mempty mempty genesisAddress2 $ replicate 3 (genesisAddress1, [genesisAddress1])
   , assertTransfers "Assert transfer from admin with no users" shouldFail
-      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress2, genesisAddress2)]
+      genesisAddress1 mempty mempty genesisAddress2 [(genesisAddress2, [genesisAddress2])]
   , assertTransfers "Assert transfer from issuer to a user" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 [(genesisAddress1, genesisAddress3)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 [(genesisAddress1, [genesisAddress3])]
   , assertTransfers "Assert transfer from issuer to a user (2x)" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 2 (genesisAddress1, genesisAddress3)
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 2 (genesisAddress1, [genesisAddress3])
   , assertTransfers "Assert transfer from issuer to a user (3x)" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, genesisAddress3)
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, [genesisAddress3])
   , assertTransfers "Assert transfer from issuer to a user (3x), then from non-user" shouldFail
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, genesisAddress3) ++ [(genesisAddress4, genesisAddress4)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 $ replicate 3 (genesisAddress1, [genesisAddress3]) ++ [(genesisAddress4, [genesisAddress4])]
   , assertTransfers "Assert transfer from filterlisted user to self (not on own filterlist)" shouldFail
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 [(genesisAddress3, genesisAddress3)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, []))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist)" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 [(genesisAddress3, genesisAddress3)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (2x)" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 2 (genesisAddress3, genesisAddress3)
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 2 (genesisAddress3, [genesisAddress3])
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x)" shouldSucceed
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, genesisAddress3)
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, [genesisAddress3])
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist) (3x), then to non-user" shouldFail
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, genesisAddress3) ++ [(genesisAddress3, genesisAddress4)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (True, [0]))] genesisAddress2 $ replicate 3 (genesisAddress3, [genesisAddress3]) ++ [(genesisAddress3, [genesisAddress4])]
   , assertTransfers "Assert transfer from filterlisted user to self (on own filterlist, restricted)" shouldFail
-      genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 [(genesisAddress3, genesisAddress3)]
+      genesisAddress1 [(genesisAddress3, 0)] [(0, (False, [0]))] genesisAddress2 [(genesisAddress3, [genesisAddress3])]
   ]
 
 -- test_AssertReceiver :: TestTree

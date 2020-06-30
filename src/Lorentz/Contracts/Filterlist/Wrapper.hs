@@ -128,7 +128,7 @@ assertExecuteWrappedContract wrappedContract = do
     unpair
     swap
   Filterlist.assertTransfer
-  unpair
+  iter Filterlist.assertReceivers
   dip $ do
     dip $ do
       swap

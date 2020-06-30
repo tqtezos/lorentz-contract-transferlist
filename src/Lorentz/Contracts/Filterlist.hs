@@ -40,6 +40,22 @@ deriving instance Show a => Show (Parameter a)
 deriving instance IsoValue a => IsoValue (Parameter a)
 
 
+-- | Management parameters for the `filterlistContract`. See `Parameter'`.
+filterlistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+  => ContractCode (Parameter' a) (Storage a)
+filterlistManagementContract = do
+  unpair
+  caseT @(Parameter' a)
+    ( #cSetIssuer /-> setIssuer
+    , #cUpdateUser /-> updateUser
+    , #cSetFilterlistOutbound /-> setFilterlistOutbound
+    , #cSetAdmin /-> setAdmin
+    , #cGetIssuer /-> getIssuer
+    , #cGetUser /-> getUser
+    , #cAssertFilterlist /-> assertFilterlist
+    , #cGetAdmin /-> getAdmin
+    )
+
 -- | A contract that accepts either one or a batch of `TransferParams`
 -- and throws and error if any transfers are disallowed.
 --
@@ -59,23 +75,18 @@ filterlistContract = do
   unpair
   caseT @(Parameter a)
     ( #cAssertTransfers /-> assertTransfers
-    , #cAssertReceivers /-> assertReceivers
-    , #cOtherParameter /-> pair >> filterlistManagementContract
+    , #cAssertReceivers /-> do
+      dip $ do
+        nil @Operation
+        nil @[a]
+      cons
+    , #cOtherParameter /-> do
+      pair
+      filterlistManagementContract
+      unpair
+      nil @[a]
     )
-
--- | Management parameters for the `filterlistContract`. See `Parameter'`.
-filterlistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
-  => ContractCode (Parameter' a) (Storage a)
-filterlistManagementContract = do
-  unpair
-  caseT @(Parameter' a)
-    ( #cSetIssuer /-> setIssuer
-    , #cUpdateUser /-> updateUser
-    , #cSetFilterlistOutbound /-> setFilterlistOutbound
-    , #cSetAdmin /-> setAdmin
-    , #cGetIssuer /-> getIssuer
-    , #cGetUser /-> getUser
-    , #cAssertFilterlist /-> assertFilterlist
-    , #cGetAdmin /-> getAdmin
-    )
+  iter assertReceivers
+  -- nil @Operation
+  pair
 

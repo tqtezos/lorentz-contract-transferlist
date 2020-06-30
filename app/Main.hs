@@ -20,21 +20,21 @@ import qualified Options.Applicative as Opt
 import qualified Data.Text.Lazy as TL
 import Text.PrettyPrint.ANSI.Leijen.Internal (Doc, linebreak)
 
-import qualified Lorentz.Contracts.Filterlist.CmdLnArgs as FilterlistCmdLnArgs
-import qualified Lorentz.Contracts.Filterlist.Wrapper.ManagedLedger.CmdLnArgs as FilterlistManagedLedgerCmdLnArgs
+import qualified Lorentz.Contracts.Transferlist.CmdLnArgs as TransferlistCmdLnArgs
+import qualified Lorentz.Contracts.Transferlist.Wrapper.ManagedLedger.CmdLnArgs as TransferlistManagedLedgerCmdLnArgs
 
 -- | Convert to a `Value`, untype, and render
 showValue :: (IsoValue t, SingI (ToT t), HasNoOp (ToT t)) => t -> TL.Text
 showValue = printTypedValue False . toVal
 
 data CmdLnArgs
-  = FilterlistCmdLnArgs { filterlistCmdLnArgs :: FilterlistCmdLnArgs.CmdLnArgs }
-  | FilterlistManagedLedgerCmdLnArgs { filterlistManagedLedgerCmdLnArgs :: FilterlistManagedLedgerCmdLnArgs.CmdLnArgs }
+  = TransferlistCmdLnArgs { transferlistCmdLnArgs :: TransferlistCmdLnArgs.CmdLnArgs }
+  | TransferlistManagedLedgerCmdLnArgs { transferlistManagedLedgerCmdLnArgs :: TransferlistManagedLedgerCmdLnArgs.CmdLnArgs }
 
 argParser :: Opt.Parser CmdLnArgs
 argParser = Opt.hsubparser $ mconcat
-  [ Opt.command "Filterlist" $ fmap FilterlistCmdLnArgs $ Opt.info FilterlistCmdLnArgs.argParser FilterlistCmdLnArgs.infoMod
-  , Opt.command "FilterlistManagedLedger" $ fmap FilterlistManagedLedgerCmdLnArgs $ Opt.info FilterlistManagedLedgerCmdLnArgs.argParser FilterlistManagedLedgerCmdLnArgs.infoMod
+  [ Opt.command "Transferlist" $ fmap TransferlistCmdLnArgs $ Opt.info TransferlistCmdLnArgs.argParser TransferlistCmdLnArgs.infoMod
+  , Opt.command "TransferlistManagedLedger" $ fmap TransferlistManagedLedgerCmdLnArgs $ Opt.info TransferlistManagedLedgerCmdLnArgs.argParser TransferlistManagedLedgerCmdLnArgs.infoMod
   ]
   where
 
@@ -78,8 +78,8 @@ main = do
     run :: CmdLnArgs -> IO ()
     run =
       \case
-        FilterlistCmdLnArgs {..} ->
-          FilterlistCmdLnArgs.runCmdLnArgs filterlistCmdLnArgs
-        FilterlistManagedLedgerCmdLnArgs {..} ->
-          FilterlistManagedLedgerCmdLnArgs.runCmdLnArgs filterlistManagedLedgerCmdLnArgs
+        TransferlistCmdLnArgs {..} ->
+          TransferlistCmdLnArgs.runCmdLnArgs transferlistCmdLnArgs
+        TransferlistManagedLedgerCmdLnArgs {..} ->
+          TransferlistManagedLedgerCmdLnArgs.runCmdLnArgs transferlistManagedLedgerCmdLnArgs
 

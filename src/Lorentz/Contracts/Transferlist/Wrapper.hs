@@ -2,7 +2,7 @@
 
 {-# OPTIONS -Wno-unused-do-bind #-}
 
-module Lorentz.Contracts.Filterlist.Wrapper where
+module Lorentz.Contracts.Transferlist.Wrapper where
 
 import Prelude hiding ((>>), drop, swap, get)
 import GHC.Generics (Generic)
@@ -11,16 +11,16 @@ import Text.Show (Show(..))
 import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
 
-import qualified Lorentz.Contracts.Filterlist as Filterlist
-import qualified Lorentz.Contracts.Filterlist.Types as Filterlist
-import qualified Lorentz.Contracts.Filterlist.Impl as Filterlist
+import qualified Lorentz.Contracts.Transferlist as Transferlist
+import qualified Lorentz.Contracts.Transferlist.Types as Transferlist
+import qualified Lorentz.Contracts.Transferlist.Impl as Transferlist
 
 type Entrypoint param store = '[ param, store] :-> ContractOut store
 
 -- | Wrapper contract parameter type
 data Parameter cp a
   = WrappedParameter !cp
-  | FilterlistParameter !(Filterlist.Parameter' a)
+  | TransferlistParameter !(Transferlist.Parameter' a)
   deriving  (Generic)
 
 instance (HasTypeAnn cp, IsoValue cp) => ParameterHasEntryPoints (Parameter cp Address) where
@@ -33,16 +33,16 @@ deriving instance (IsoValue cp, IsoValue a) => IsoValue (Parameter cp a)
 data Storage st a =
   Storage
     { wrappedStorage :: !st
-    , filterlistStorage :: !(Filterlist.Storage a)
+    , transferlistStorage :: !(Transferlist.Storage a)
     }
   deriving  (Generic)
 
 -- | Coerce from `Storage`
-unStorage :: Storage st a & s :-> (st, Filterlist.Storage a) & s
+unStorage :: Storage st a & s :-> (st, Transferlist.Storage a) & s
 unStorage = forcedCoerce_
 
 -- | Coerce to `Storage`
-toStorage :: (st, Filterlist.Storage a) & s :-> Storage st a & s
+toStorage :: (st, Transferlist.Storage a) & s :-> Storage st a & s
 toStorage = forcedCoerce_
 
 deriving instance (Show st, Show a) => Show (Storage st a)
@@ -50,14 +50,14 @@ deriving instance (Show st, Show a) => Show (Storage st a)
 deriving instance (IsoValue st, Ord a, IsoValue a, IsoCValue a)
   => IsoValue (Storage st a)
 
--- | Given a transformation from @cp@ to zero or one `Filterlist.TransferParams`,
--- use the filterlist to `Filterlist.assertTransfer` if `Just` and otherwise
+-- | Given a transformation from @cp@ to zero or one `Transferlist.TransferParams`,
+-- use the transferlist to `Transferlist.assertTransfer` if `Just` and otherwise
 -- execute the wrapped contract
-filterlistWrappedContract :: forall a cp st. (IsComparable a, KnownValue a, NoOperation a, IsoValue cp)
-  => (forall s. cp & s :-> Maybe (Filterlist.TransferParams a) & s)
+transferlistWrappedContract :: forall a cp st. (IsComparable a, KnownValue a, NoOperation a, IsoValue cp)
+  => (forall s. cp & s :-> Maybe (Transferlist.TransferParams a) & s)
   -> ContractCode cp st
   -> ContractCode (Parameter cp a) (Storage st a)
-filterlistWrappedContract getTransferParams wrappedContract = do
+transferlistWrappedContract getTransferParams wrappedContract = do
   unpair
   caseT @(Parameter cp a)
     ( #cWrappedParameter /-> do
@@ -66,14 +66,14 @@ filterlistWrappedContract getTransferParams wrappedContract = do
         ifNone
           (executeWrappedContract wrappedContract)
           (assertExecuteWrappedContract wrappedContract)
-    , #cFilterlistParameter /-> do
+    , #cTransferlistParameter /-> do
         dip $ do
           unStorage
           unpair
         swap
         dip $ do
           pair
-          Filterlist.filterlistManagementContract @a
+          Transferlist.transferlistManagementContract @a
           unpair
         swap
         dip $ do
@@ -119,19 +119,19 @@ executeWrappedContract wrappedContract = do
   pair
 
 -- | Run the @wrappedContract@ on the given parameter and storage,
--- after running `Filterlist.assertTransfer` on the given
--- `Filterlist.TransferParams`
+-- after running `Transferlist.assertTransfer` on the given
+-- `Transferlist.TransferParams`
 assertExecuteWrappedContract :: forall a cp st. (NiceComparable a, IsComparable a)
   => ContractCode cp st
-  -> Filterlist.TransferParams a & cp & '[Storage st a] :-> '[([Operation], Storage st a)]
+  -> Transferlist.TransferParams a & cp & '[Storage st a] :-> '[([Operation], Storage st a)]
 assertExecuteWrappedContract wrappedContract = do
   dip $ do
     swap
     unStorage
     unpair
     swap
-  Filterlist.assertTransfer
-  iter Filterlist.assertReceivers
+  Transferlist.assertTransfer
+  iter Transferlist.assertReceivers
   dip $ do
     dip $ do
       swap
@@ -143,7 +143,7 @@ assertExecuteWrappedContract wrappedContract = do
     pair
     toStorage
     swap
-  swap -- the result of Filterlist.assertTransfer is a singleton or nothing
+  swap -- the result of Transferlist.assertTransfer is a singleton or nothing
   prependSingletonOrNil
   pair
 

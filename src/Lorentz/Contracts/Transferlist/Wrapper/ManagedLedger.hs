@@ -2,31 +2,31 @@
 
 {-# OPTIONS -Wno-unused-do-bind #-}
 
-module Lorentz.Contracts.Filterlist.Wrapper.ManagedLedger where
+module Lorentz.Contracts.Transferlist.Wrapper.ManagedLedger where
 
 import Prelude hiding ((>>), drop, swap, get, some)
 
 import Lorentz
 
-import qualified Lorentz.Contracts.Filterlist.Types as Filterlist
-import qualified Lorentz.Contracts.Filterlist.Wrapper as Wrapper
+import qualified Lorentz.Contracts.Transferlist.Types as Transferlist
+import qualified Lorentz.Contracts.Transferlist.Wrapper as Wrapper
 
 import qualified Lorentz.Contracts.ManagedLedger as ManagedLedger
 
--- | `ManagedLedger.managedLedgerContract` with filterlisting for transfers
-filterlistedManagedLedgerContract ::
+-- | `ManagedLedger.managedLedgerContract` with transferlisting for transfers
+transferlistedManagedLedgerContract ::
   ContractCode
     (Wrapper.Parameter ManagedLedger.Parameter Address)
     (Wrapper.Storage ManagedLedger.Storage Address)
-filterlistedManagedLedgerContract =
-  Wrapper.filterlistWrappedContract
+transferlistedManagedLedgerContract =
+  Wrapper.transferlistWrappedContract
     managedLedgerTransferParams
     ManagedLedger.managedLedgerContract
 
 -- | If `ManagedLedger.Parameter` is `ManagedLedger.Transfer`,
 -- emit `Just` the to/from addresses, otherwise emit `Nothing`
 managedLedgerTransferParams :: forall s. ()
-  => ManagedLedger.Parameter & s :-> Maybe (Filterlist.TransferParams Address) & s
+  => ManagedLedger.Parameter & s :-> Maybe (Transferlist.TransferParams Address) & s
 managedLedgerTransferParams = do
   caseT @ManagedLedger.Parameter
     ( #cTransfer /-> do
@@ -37,7 +37,7 @@ managedLedgerTransferParams = do
           dip nil
           cons
         pair
-        Filterlist.toTransferParams
+        Transferlist.toTransferParams
         some
     , #cApprove /-> drop >> none
     , #cApproveCAS /-> drop >> none

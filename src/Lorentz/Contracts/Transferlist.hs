@@ -2,7 +2,7 @@
 
 {-# OPTIONS -Wno-unused-do-bind #-}
 
-module Lorentz.Contracts.Filterlist where
+module Lorentz.Contracts.Transferlist where
 
 import Prelude hiding ((>>), drop, swap, get)
 import GHC.Generics (Generic, Generic1)
@@ -12,8 +12,8 @@ import Lorentz
 import Michelson.Typed.Haskell.Value (IsComparable)
 import Michelson.Typed.Value.Missing ()
 
-import Lorentz.Contracts.Filterlist.Types
-import Lorentz.Contracts.Filterlist.Impl
+import Lorentz.Contracts.Transferlist.Types
+import Lorentz.Contracts.Transferlist.Impl
 
 -- | Parameters are separated into assertions and management/`View`
 -- parameters (`Parameter'`).
@@ -24,7 +24,7 @@ import Lorentz.Contracts.Filterlist.Impl
 data Parameter a
   -- | Assert that a list of transfers is valid
   = AssertTransfers ![TransferParams a]
-  -- | Assert that a user is filterlisted and `unrestricted`
+  -- | Assert that a user is transferlisted and `unrestricted`
   | AssertReceivers ![a]
   -- | Management and `View` parameters
   | OtherParameter !(Parameter' a)
@@ -40,38 +40,38 @@ deriving instance Show a => Show (Parameter a)
 deriving instance IsoValue a => IsoValue (Parameter a)
 
 
--- | Management parameters for the `filterlistContract`. See `Parameter'`.
-filterlistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+-- | Management parameters for the `transferlistContract`. See `Parameter'`.
+transferlistManagementContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
   => ContractCode (Parameter' a) (Storage a)
-filterlistManagementContract = do
+transferlistManagementContract = do
   unpair
   caseT @(Parameter' a)
     ( #cSetIssuer /-> setIssuer
     , #cUpdateUser /-> updateUser
-    , #cSetFilterlistOutbound /-> setFilterlistOutbound
+    , #cSetTransferlistOutbound /-> setTransferlistOutbound
     , #cSetAdmin /-> setAdmin
     , #cGetIssuer /-> getIssuer
     , #cGetUser /-> getUser
-    , #cAssertFilterlist /-> assertFilterlist
+    , #cAssertTransferlist /-> assertTransferlist
     , #cGetAdmin /-> getAdmin
     )
 
 -- | A contract that accepts either one or a batch of `TransferParams`
 -- and throws and error if any transfers are disallowed.
 --
--- Only filterlisted users and the "issuer" may participate in transfers.
--- - The issuer may transfer to any filterlisted user
--- - Each filterlisted user is associated to exactly one filterlist, by `FilterlistId`
--- - Each filterlist has a set of outbound filterlists that it may transfer to
--- - A filterlist may be restricted, i.e. its set of outbound filterlists is "empty"
+-- Only transferlisted users and the "issuer" may participate in transfers.
+-- - The issuer may transfer to any transferlisted user
+-- - Each transferlisted user is associated to exactly one transferlist, by `TransferlistId`
+-- - Each transferlist has a set of outbound transferlists that it may transfer to
+-- - A transferlist may be restricted, i.e. its set of outbound transferlists is "empty"
 --  * We store both @(`unrestricted` :: `Bool`)@ and
---    a set of `FilterlistId`'s so that restriction may be easily toggled
--- - A user may transfer to any other filterlisted user with a filterlist in their filterlist's outbound list
+--    a set of `TransferlistId`'s so that restriction may be easily toggled
+-- - A user may transfer to any other transferlisted user with a transferlist in their transferlist's outbound list
 --
 -- See `Parameter` and `Storage` for more detail.
-filterlistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
+transferlistContract :: forall a. (IsComparable a, KnownValue a, NoOperation a)
   => ContractCode (Parameter a) (Storage a)
-filterlistContract = do
+transferlistContract = do
   unpair
   caseT @(Parameter a)
     ( #cAssertTransfers /-> assertTransfers
@@ -82,7 +82,7 @@ filterlistContract = do
       cons
     , #cOtherParameter /-> do
       pair
-      filterlistManagementContract
+      transferlistManagementContract
       unpair
       nil @[a]
     )

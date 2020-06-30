@@ -2,7 +2,7 @@
 
 {-# OPTIONS -Wno-unused-do-bind #-}
 
-module Lorentz.Contracts.Filterlist.Impl where
+module Lorentz.Contracts.Transferlist.Impl where
 
 import Prelude hiding ((>>), drop, swap, get)
 
@@ -10,7 +10,7 @@ import Lorentz
 import Michelson.Text
 import Michelson.Typed.Haskell.Value (IsComparable)
 
-import Lorentz.Contracts.Filterlist.Types
+import Lorentz.Contracts.Transferlist.Types
 
 
 --------------
@@ -22,29 +22,29 @@ import Lorentz.Contracts.Filterlist.Types
 --
 -- The `issuer` is allowed to transfer to anyone.
 --
--- If the sender's `FilterlistId`'s `OutboundFilterlists` is `unrestricted`,
--- they may transfer to any receiver whose `FilterlistId` is in their
--- `allowedFilterlists`.
+-- If the sender's `TransferlistId`'s `OutboundTransferlists` is `unrestricted`,
+-- they may transfer to any receiver whose `TransferlistId` is in their
+-- `allowedTransferlists`.
 assertTransfer_ ::
      forall a s. (NiceComparable a, IsComparable a)
-  => TransferParams a & a & [[a]] & Users a & Filterlists & s :-> a & [[a]] & Users a & Filterlists & s
+  => TransferParams a & a & [[a]] & Users a & Transferlists & s :-> a & [[a]] & Users a & Transferlists & s
 assertTransfer_ = do
   dip $ forcedCoerce_ @a @("issuer" :! a)
   unTransferParams
   forcedCoerce_ @(a, [a]) @("from" :! a, "tos" :! [a])
-  stackType @(("from" :! a, "tos" :! [a]) & "issuer" :! a & [[a]] & Users a & Filterlists & s)
+  stackType @(("from" :! a, "tos" :! [a]) & "issuer" :! a & [[a]] & Users a & Transferlists & s)
   unpair
-  stackType @("from" :! a & "tos" :! [a] & "issuer" :! a & [[a]] & Users a & Filterlists & s)
+  stackType @("from" :! a & "tos" :! [a] & "issuer" :! a & [[a]] & Users a & Transferlists & s)
   dig @2
   dup
-  stackType @("issuer" :! a & "issuer" :! a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Filterlists & s)
+  stackType @("issuer" :! a & "issuer" :! a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Transferlists & s)
   dip $ do
-    stackType @("issuer" :! a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Filterlists & s)
+    stackType @("issuer" :! a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Transferlists & s)
     forcedCoerce_ @("issuer" :! a) @a
     dip $ do
       dup
       forcedCoerce_ @("from" :! a) @a
-    stackType @(a & a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Filterlists & s)
+    stackType @(a & a & "from" :! a & "tos" :! [a] & [[a]] & Users a & Transferlists & s)
     ifEq
       (do
         drop
@@ -52,53 +52,53 @@ assertTransfer_ = do
         cons
       )
       (do
-        stackType @("from" :! a & "tos" :! [a] & [[a]] & Users a & Filterlists & s)
+        stackType @("from" :! a & "tos" :! [a] & [[a]] & Users a & Transferlists & s)
         dig @3
         dup
-        stackType @(Users a & Users a & "from" :! a & "tos" :! [a] & [[a]] & Filterlists & s)
+        stackType @(Users a & Users a & "from" :! a & "tos" :! [a] & [[a]] & Transferlists & s)
         dip $ do
-          stackType @(Users a & "from" :! a & "tos" :! [a] & [[a]] & Filterlists & s)
+          stackType @(Users a & "from" :! a & "tos" :! [a] & [[a]] & Transferlists & s)
           swap
           forcedCoerce_ @("from" :! a) @a
-          assertUserFilterlist
-          forcedCoerce_ @FilterlistId @("from" :! FilterlistId)
-          stackType @("from" :! FilterlistId & "tos" :! [a] & [[a]] & Filterlists & s)
+          assertUserTransferlist
+          forcedCoerce_ @TransferlistId @("from" :! TransferlistId)
+          stackType @("from" :! TransferlistId & "tos" :! [a] & [[a]] & Transferlists & s)
           dig @3
           dup
-          stackType @(Filterlists & Filterlists & "from" :! FilterlistId & "tos" :! [a] & [[a]] & s)
+          stackType @(Transferlists & Transferlists & "from" :! TransferlistId & "tos" :! [a] & [[a]] & s)
           dip $ do
-            stackType @(Filterlists & "from" :! FilterlistId & "tos" :! [a] & [[a]] & s)
+            stackType @(Transferlists & "from" :! TransferlistId & "tos" :! [a] & [[a]] & s)
             swap
-            forcedCoerce_ @("from" :! FilterlistId) @FilterlistId
-            assertOutboundFilterlists
-            assertUnrestrictedOutboundFilterlists
-            forcedCoerce_ @(Set FilterlistId) @("from" :! Set FilterlistId)
-            stackType @("from" :! Set FilterlistId & "tos" :! [a] & [[a]] & s)
-        stackType @(Users a & Filterlists & "from" :! Set FilterlistId & "tos" :! [a] & [[a]] & s)
+            forcedCoerce_ @("from" :! TransferlistId) @TransferlistId
+            assertOutboundTransferlists
+            assertUnrestrictedOutboundTransferlists
+            forcedCoerce_ @(Set TransferlistId) @("from" :! Set TransferlistId)
+            stackType @("from" :! Set TransferlistId & "tos" :! [a] & [[a]] & s)
+        stackType @(Users a & Transferlists & "from" :! Set TransferlistId & "tos" :! [a] & [[a]] & s)
         dup
         dip $ do
-          stackType @(Users a & Filterlists & "from" :! Set FilterlistId & "tos" :! [a] & [[a]] & s)
+          stackType @(Users a & Transferlists & "from" :! Set TransferlistId & "tos" :! [a] & [[a]] & s)
           swap
           dug @3
-          stackType @(Users a & "from" :! Set FilterlistId & "tos" :! [a] & Filterlists & [[a]] & s)
+          stackType @(Users a & "from" :! Set TransferlistId & "tos" :! [a] & Transferlists & [[a]] & s)
           dig @2
           forcedCoerce_ @("tos" :! [a]) @[a]
           iter $ do
-            stackType @(a & Users a & "from" :! Set FilterlistId & Filterlists & [[a]] & s)
+            stackType @(a & Users a & "from" :! Set TransferlistId & Transferlists & [[a]] & s)
             swap
             dup
             dip $ do
               swap
-              stackType @(a & Users a & "from" :! Set FilterlistId & Filterlists & [[a]] & s)
-              assertUserFilterlist
+              stackType @(a & Users a & "from" :! Set TransferlistId & Transferlists & [[a]] & s)
+              assertUserTransferlist
               dip $ do
                 dup
-                forcedCoerce_ @("from" :! Set FilterlistId) @(Set FilterlistId)
+                forcedCoerce_ @("from" :! Set TransferlistId) @(Set TransferlistId)
               mem
-              assert $ mkMTextUnsafe "outbound not filterlisted"
+              assert $ mkMTextUnsafe "outbound not transferlisted"
           dropN @2
         dig @2
-        stackType @([[a]] & Users a & Filterlists & s)
+        stackType @([[a]] & Users a & Transferlists & s)
       )
   forcedCoerce_ @("issuer" :! a) @a
 
@@ -141,7 +141,7 @@ assertTransfers = do
   dip $ do
     dropN @3
 
--- | Assert that all users are filterlisted and `unrestricted`, or the issuer
+-- | Assert that all users are transferlisted and `unrestricted`, or the issuer
 assertReceivers ::
      forall a s. (NiceComparable a, IsComparable a)
   => [a] & [Operation] & Storage a & s :-> [Operation] & Storage a & s
@@ -153,7 +153,7 @@ assertReceivers = do
       unpair
       dip car
       unpair
-      stackType @(a & Users a & Filterlists & Storage a & s)
+      stackType @(a & Users a & Transferlists & Storage a & s)
   iter $ do
     swap
     dip assertReceiver
@@ -169,8 +169,8 @@ setIssuer = do
     unpair
     dip $ do
       unpair
-      -- filterlists & admin
-      stackType @(Filterlists & Address & '[])
+      -- transferlists & admin
+      stackType @(Transferlists & Address & '[])
       dip $ assertAdmin
       pair
     cdr
@@ -188,7 +188,7 @@ assertNotIssuer = do
     dip dup
     assertNeq $ mkMTextUnsafe "issuer is not a user"
 
--- | Add/update a user with a particular `FilterlistId`,
+-- | Add/update a user with a particular `TransferlistId`,
 -- or implicitly remove by providing `Nothing`
 --
 -- Only admin
@@ -199,15 +199,15 @@ updateUser = do
     unpair
     dip $ do
       unpair
-      -- filterlists & admin
-      stackType @(Filterlists & Address & '[])
+      -- transferlists & admin
+      stackType @(Transferlists & Address & '[])
       dip $ do
         assertAdmin
       pair
     unpair
   unUpdateUserParams
-  -- user & new_filterlist & issuer & users & cdr store
-  stackType @(a & Maybe FilterlistId & a & Users a & (Filterlists, Address) & '[])
+  -- user & new_transferlist & issuer & users & cdr store
+  stackType @(a & Maybe TransferlistId & a & Users a & (Transferlists, Address) & '[])
   swap
   dip assertNotIssuer
   pair
@@ -215,26 +215,26 @@ updateUser = do
   dip $ do
     unpair
     swap
-    updateUserFilterlist
+    updateUserTransferlist
   pair
   pair
   toStorage
   nil
   pair
 
--- | Set the `FilterlistOutboundParams` for a `FilterlistId`
+-- | Set the `TransferlistOutboundParams` for a `TransferlistId`
 --
 -- Only admin
-setFilterlistOutbound :: forall a. () => Entrypoint FilterlistOutboundParams (Storage a)
-setFilterlistOutbound = do
+setTransferlistOutbound :: forall a. () => Entrypoint TransferlistOutboundParams (Storage a)
+setTransferlistOutbound = do
   dip $ do
     unStorage
     unpair
     swap
     unpair
     dip assertAdmin
-  unFilterlistOutboundParams
-  setOutboundFilterlists
+  unTransferlistOutboundParams
+  setOutboundTransferlists
   pair
   swap
   pair
@@ -277,8 +277,8 @@ getIssuer =
     car
     car
 
--- | Get a user's `FilterlistId`, or `Nothing` if the user is not present
-getUser :: forall a. (IsComparable a) => Entrypoint (View a (Maybe FilterlistId)) (Storage a)
+-- | Get a user's `TransferlistId`, or `Nothing` if the user is not present
+getUser :: forall a. (IsComparable a) => Entrypoint (View a (Maybe TransferlistId)) (Storage a)
 getUser =
   view_ $ do
     unpair
@@ -286,11 +286,11 @@ getUser =
       unStorage
       car
       cdr
-    getUserFilterlist
+    getUserTransferlist
 
-assertFilterlist :: forall a. () => Entrypoint AssertFilterlistParams (Storage a)
-assertFilterlist = do
-  unAssertFilterlistParams
+assertTransferlist :: forall a. () => Entrypoint AssertTransferlistParams (Storage a)
+assertTransferlist = do
+  unAssertTransferlistParams
   dip $ do
     dup
     unStorage
@@ -299,12 +299,12 @@ assertFilterlist = do
   unpair
   swap
   dip $ do
-    outboundFilterlists
+    outboundTransferlists
   ifNone
     (assertNone $ mkMTextUnsafe "exists")
     (do
       dip . assertSome $ mkMTextUnsafe "doesn't exist"
-      assertSubsetOutboundFilterlists
+      assertSubsetOutboundTransferlists
     )
   nil @Operation
   pair

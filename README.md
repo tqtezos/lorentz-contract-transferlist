@@ -4,23 +4,23 @@ See the FA1.2 [Quick Start Tutorial](https://assets.tqtezos.com/token-contracts/
 # The CLI
 
 The CLI has two parts:
-- `Filterlist`: Polymorphic filterlist contract and parameters
-- `FilterlistManagedLedger`: The Filterlisted FA1.2 contract
+- `Transferlist`: Polymorphic transferlist contract and parameters
+- `TransferlistManagedLedger`: The Transferlisted FA1.2 contract
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist --help
+❯❯❯ ./stack exec -- lorentz-contract-transferlist --help
 
 Lorentz tools
 
-Usage: lorentz-contract-filterlist COMMAND
+Usage: lorentz-contract-transferlist COMMAND
   Sale contract parameter generation helper
 
 Available options:
   -h,--help                Show this help text
 
 Available commands:
-  Filterlist                Filterlist contract CLI interface
-  FilterlistManagedLedger   Filterlist Wrapped ManagedLedger contract CLI
+  Transferlist                Transferlist contract CLI interface
+  TransferlistManagedLedger   Transferlist Wrapped ManagedLedger contract CLI
                            interface
 
 You can use help for specific COMMAND
@@ -28,51 +28,51 @@ EXAMPLE:
   lorentz-contract-sale COMMAND --help
 ```
 
-The `FilterlistManagedLedger` part is only used to print and initialize a wrapped
+The `TransferlistManagedLedger` part is only used to print and initialize a wrapped
 `ManagedLedger`, i.e. FA1.2, contract.
-The rest of the interface is provided in the `Filterlist` part:
+The rest of the interface is provided in the `Transferlist` part:
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist Filterlist --help
-Usage: lorentz-contract-filterlist Filterlist COMMAND
-  Filterlist contract CLI interface
+❯❯❯ ./stack exec -- lorentz-contract-transferlist Transferlist --help
+Usage: lorentz-contract-transferlist Transferlist COMMAND
+  Transferlist contract CLI interface
 
 Available options:
   -h,--help                Show this help text
 
 Available commands:
-  print                    Dump the Filterlist contract in form of Michelson code
-  init                     Initial storage for the (wrapped) Filterlist contract:
+  print                    Dump the Transferlist contract in form of Michelson code
+  init                     Initial storage for the (wrapped) Transferlist contract:
                            pass 'initialWrappedStorage' for the wrapped version
-  assertTransfer           Generate the parameter for the Filterlist contract:
+  assertTransfer           Generate the parameter for the Transferlist contract:
                            AssertTransfer
-  SetIssuer                Generate the (wrapped) parameter for the Filterlist
+  SetIssuer                Generate the (wrapped) parameter for the Transferlist
                            contract: SetIssuer
-  AddUser                  Generate the (wrapped) parameter for the Filterlist
+  AddUser                  Generate the (wrapped) parameter for the Transferlist
                            contract: AddUser
-  SetFilterlistOutbound     Generate the (wrapped) parameter for the Filterlist
-                           contract: SetFilterlistOutbound
-  SetAdmin                 Generate the (wrapped) parameter for the Filterlist
+  SetTransferlistOutbound     Generate the (wrapped) parameter for the Transferlist
+                           contract: SetTransferlistOutbound
+  SetAdmin                 Generate the (wrapped) parameter for the Transferlist
                            contract: SetAdmin
-  GetIssuer                Generate the (wrapped) parameter for the Filterlist
+  GetIssuer                Generate the (wrapped) parameter for the Transferlist
                            contract: GetIssuer
-  GetUser                  Generate the (wrapped) parameter for the Filterlist
+  GetUser                  Generate the (wrapped) parameter for the Transferlist
                            contract: GetUser
-  GetFilterlist             Generate the (wrapped) parameter for the Filterlist
-                           contract: GetFilterlist
-  GetAdmin                 Generate the (wrapped) parameter for the Filterlist
+  GetTransferlist             Generate the (wrapped) parameter for the Transferlist
+                           contract: GetTransferlist
+  GetAdmin                 Generate the (wrapped) parameter for the Transferlist
                            contract: GetAdmin
-  WrappedParam             Generate a wrapped parameter for the Filterlist
+  WrappedParam             Generate a wrapped parameter for the Transferlist
                            contract, given the original contract's parameter
 ```
 
-# Standalone Filterlist Contract
+# Standalone Transferlist Contract
 
 An example initial storage:
 
 ```bash
-❯❯❯ stack exec -- lorentz-contract-filterlist Filterlist init --issuer "\"$ALICE_ADDRESS\"" \
-  --filterlists "[]" \
+❯❯❯ stack exec -- lorentz-contract-transferlist Transferlist init --issuer "\"$ALICE_ADDRESS\"" \
+  --transferlists "[]" \
   --users "[]" \
   --admin "\"$ALICE_ADDRESS\"" \
   --initialStorageType 'address'
@@ -83,11 +83,11 @@ Pair (Pair "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr" { }) (Pair { } "tz1R3vJ5TV8Y5p
 To originate the contract:
 
 ```bash
-$ tezos-client --wait none originate contract Filterlist \
+$ tezos-client --wait none originate contract Transferlist \
   transferring 0 from $ALICE_ADDRESS running \
-  "$(cat contracts/address_filterlist.tz)" \
-  --init "$(stack exec -- lorentz-contract-filterlist Filterlist init --issuer "\"$ALICE_ADDRESS\"" \
-  --filterlists "[]" \
+  "$(cat contracts/address_transferlist.tz)" \
+  --init "$(stack exec -- lorentz-contract-transferlist Transferlist init --issuer "\"$ALICE_ADDRESS\"" \
+  --transferlists "[]" \
   --users "[]" \
   --admin "\"$ALICE_ADDRESS\"" \
   --initialStorageType 'address')" --burn-cap 2.868
@@ -136,38 +136,38 @@ This sequence of operations was run:
           tz1bDCu64RmcpWahdn9bWrDMi6cu7mXZynHm ... -ꜩ0.257
 
 New contract KT1EYLosB86x6fExJutPA8wDKHqs1NgkHz4P originated.
-Contract memorized as Filterlist.
+Contract memorized as Transferlist.
 ```
 
-# Originating the Filterlisted FA1.2 contract
+# Originating the Transferlisted FA1.2 contract
 
-The CLI interface for the Filterlisted FA1.2 a.k.a. `FilterlistManagedLedger`
+The CLI interface for the Transferlisted FA1.2 a.k.a. `TransferlistManagedLedger`
 only includes the `print` command:
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist FilterlistManagedLedger --help
+❯❯❯ ./stack exec -- lorentz-contract-transferlist TransferlistManagedLedger --help
 
-Usage: lorentz-contract-filterlist FilterlistManagedLedger COMMAND
-  Filterlist Wrapped ManagedLedger contract CLI interface
+Usage: lorentz-contract-transferlist TransferlistManagedLedger COMMAND
+  Transferlist Wrapped ManagedLedger contract CLI interface
 
 Available options:
   -h,--help                Show this help text
 
 Available commands:
   print                    Dump the Oracle contract in form of Michelson code
-  init                     Initial storage for the Filterlist Wrapped
+  init                     Initial storage for the Transferlist Wrapped
                            ManagedLedger contract
 ```
 
 
-## Printing the Filterlisted FA1.2 contract
+## Printing the Transferlisted FA1.2 contract
 
 The print command only has arguments to output to a file or print on one line:
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist FilterlistManagedLedger print --help
+❯❯❯ ./stack exec -- lorentz-contract-transferlist TransferlistManagedLedger print --help
 
-Usage: lorentz-contract-filterlist FilterlistManagedLedger print [-o|--output FILEPATH]
+Usage: lorentz-contract-transferlist TransferlistManagedLedger print [-o|--output FILEPATH]
                                                                [--oneline]
   Dump the Oracle contract in form of Michelson code
 
@@ -182,27 +182,27 @@ Available options:
 
 ## Initial storage
 
-We can use the `init` command from the `FilterlistManagedLedger` part
+We can use the `init` command from the `TransferlistManagedLedger` part
 to generate the initial storage:
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist FilterlistManagedLedger init --help
+❯❯❯ ./stack exec -- lorentz-contract-transferlist TransferlistManagedLedger init --help
 
-Usage: lorentz-contract-filterlist FilterlistManagedLedger init --issuer ADDRESS
-                                                              --users User Filterlists
-                                                              --filterlists Filterlists and their allowed outbound Filterlists
+Usage: lorentz-contract-transferlist TransferlistManagedLedger init --issuer ADDRESS
+                                                              --users User Transferlists
+                                                              --transferlists Transferlists and their allowed outbound Transferlists
                                                               --admin ADDRESS
                                                               --managedLedgerAdmin ADDRESS
                                                               --balances [(ADDRESS, NATURAL)]
-  Initial storage for the Filterlist Wrapped ManagedLedger contract
+  Initial storage for the Transferlist Wrapped ManagedLedger contract
 
 Available options:
   -h,--help                Show this help text
   --issuer ADDRESS         Address of the issuer.
-  --users User Filterlists  User Filterlists: User, Filterlist ID or Nothing
-  --filterlists Filterlists and their allowed outbound Filterlists
-                           Filterlists: Filterlist ID, Restricted, Allowed
-                           outbound Filterlist IDs
+  --users User Transferlists  User Transferlists: User, Transferlist ID or Nothing
+  --transferlists Transferlists and their allowed outbound Transferlists
+                           Transferlists: Transferlist ID, Restricted, Allowed
+                           outbound Transferlist IDs
   --admin ADDRESS          Address of the admin.
   --managedLedgerAdmin ADDRESS
                            Address of the managedLedgerAdmin.
@@ -213,9 +213,9 @@ Available options:
 
 We'll need to set:
 - `issuer`: A privledged address that may transfer without restrictions
-- `users`: A map of user addresses to filterlist ID's
-- `filterlists`: A map from filterlist ID's to `(restricted :: Bool, outboundAllowedFilterlists :: [FilterlistId])`
-- `admin`: the filterlist admin, that can change the issuer and update the filterlists
+- `users`: A map of user addresses to transferlist ID's
+- `transferlists`: A map from transferlist ID's to `(restricted :: Bool, outboundAllowedTransferlists :: [TransferlistId])`
+- `admin`: the transferlist admin, that can change the issuer and update the transferlists
 - `managedLedgerAdmin`: the admin of the `ManagedLedger` part, who can mint/burn/pause
 - `balances`: the initial balances
 
@@ -228,15 +228,15 @@ to send operations, an already-originated FA1.2 on `babylonnet`: `KT1RUhPAABRhZB
   --issuer $FA12_ADDRESS
 ```
 
-We'll leave the `filterlists`, `users` and `balances` initially empty:
+We'll leave the `transferlists`, `users` and `balances` initially empty:
 
 ```bash
-  --filterlists ""
+  --transferlists ""
   --users ""
   --balances "[]"
 ```
 
-Finally, we'll make `alice` both the filterlist `admin` and the `managedLedgerAdmin`:
+Finally, we'll make `alice` both the transferlist `admin` and the `managedLedgerAdmin`:
 
 ```bash
   --admin $ALICE_ADDRESS
@@ -244,9 +244,9 @@ Finally, we'll make `alice` both the filterlist `admin` and the `managedLedgerAd
 ```
 
 ```bash
-❯❯❯ ./stack exec -- lorentz-contract-filterlist FilterlistManagedLedger init \
+❯❯❯ ./stack exec -- lorentz-contract-transferlist TransferlistManagedLedger init \
   --issuer $FA12_ADDRESS \
-  --filterlists "" \
+  --transferlists "" \
   --users "" \
   --balances "[]" \
   --admin $ALICE_ADDRESS \
@@ -259,13 +259,13 @@ Pair (Pair { } (Pair "tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr" (Pair False 0))) (Pa
 ## Running the origination
 
 ```bash
-❯❯❯ alpha-client --wait none originate contract FilterlistedManagedLedger \
+❯❯❯ alpha-client --wait none originate contract TransferlistedManagedLedger \
   transferring 0 from $ALICE_ADDRESS running \
-  "$(./stack exec -- lorentz-contract-filterlist FilterlistManagedLedger print \
+  "$(./stack exec -- lorentz-contract-transferlist TransferlistManagedLedger print \
   --oneline)" \
-  --init "$(./stack exec -- lorentz-contract-Filterlist FilterlistManagedLedger init \
+  --init "$(./stack exec -- lorentz-contract-Transferlist TransferlistManagedLedger init \
   --issuer $FA12_ADDRESS \
-  --filterlists "" \
+  --transferlists "" \
   --users "" \
   --balances "[]" \
   --admin $ALICE_ADDRESS \
@@ -335,17 +335,17 @@ This sequence of operations was run:
           tz1R3vJ5TV8Y5pVj8dicBR23Zv8JArusDkYr ... -ꜩ0.257
 
 New contract KT1BddbuJHr85iomhaoxxwEEy2o38TdZ1rQS originated.
-Contract memorized as FilterlistedManagedLedger.
+Contract memorized as TransferlistedManagedLedger.
 ```
 
 Set a `bash` alias for the address:
 
 ```bash
-❯❯❯ FILTERLISTED_FA12="KT1BddbuJHr85iomhaoxxwEEy2o38TdZ1rQS"
+❯❯❯ TRANSFERLISTED_FA12="KT1BddbuJHr85iomhaoxxwEEy2o38TdZ1rQS"
 ```
 
-As mentioned before, the polymorhic `Filterlist` part is used for all but
-printing and initializing the `FilterlistManagedLedger` contract.
+As mentioned before, the polymorhic `Transferlist` part is used for all but
+printing and initializing the `TransferlistManagedLedger` contract.
 
 
 

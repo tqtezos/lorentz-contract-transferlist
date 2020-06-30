@@ -16,7 +16,7 @@ import Lorentz
 import Michelson.Text
 import Michelson.Typed.Haskell.Value (IsComparable)
 
--- | A transfer between users
+-- | A transfer from one user to zero or more users
 data TransferParams a = TransferParams
   { -- | The user sending "tokens"
     from :: !a
@@ -83,12 +83,10 @@ deriving instance IsoValue a => IsoValue (UpdateUserParams a)
 
 instance HasTypeAnn a => HasTypeAnn (UpdateUserParams a)
 
-
--- data FilterlistContents = FilterlistContents
---   { unrestricted       :: !Bool
---   , allowedFilterlists :: !(Set Natural)
---   }
---   deriving (Eq, Ord, Read, Show, Generic, IsoValue, HasTypeAnn)
+-- | Parameters to assert that a filterlist exists (or doesn't, if `Nothing`),
+-- that the given `OutboundFilterlists` matches its `unrestricted`,
+-- and that the given `outboundFilterlists` is a subset of its
+-- `outboundFilterlists`
 data AssertFilterlistParams = AssertFilterlistParams
   { -- | The user to update
     filterlistId :: !Natural

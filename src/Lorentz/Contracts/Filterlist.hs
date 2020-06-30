@@ -87,6 +87,5 @@ filterlistContract = do
       nil @[a]
     )
   iter assertReceivers
-  -- nil @Operation
   pair
 

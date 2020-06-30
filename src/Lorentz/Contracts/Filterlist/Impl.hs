@@ -119,10 +119,7 @@ assertTransfer = do
     dip $ nil @[a]
   assertTransfer_ @a
   swap
-  dip $ do
-    dropN @3
-    -- pair
-
+  dip $ dropN @3
 
 -- | `assertTransfer` for a list of `TransferParams`
 assertTransfers ::
@@ -143,7 +140,6 @@ assertTransfers = do
   swap
   dip $ do
     dropN @3
-    -- pair
 
 -- | Assert that all users are filterlisted and `unrestricted`, or the issuer
 assertReceivers ::
@@ -162,8 +158,6 @@ assertReceivers = do
     swap
     dip assertReceiver
   dip $ dropN @3
-  -- nil
-  -- pair
 
 -- | Set the issuer
 --

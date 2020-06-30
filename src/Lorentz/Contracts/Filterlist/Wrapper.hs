@@ -17,6 +17,7 @@ import qualified Lorentz.Contracts.Filterlist.Impl as Filterlist
 
 type Entrypoint param store = '[ param, store] :-> ContractOut store
 
+-- | Wrapper contract parameter type
 data Parameter cp a
   = WrappedParameter !cp
   | FilterlistParameter !(Filterlist.Parameter' a)
@@ -36,9 +37,11 @@ data Storage st a =
     }
   deriving  (Generic)
 
+-- | Coerce from `Storage`
 unStorage :: Storage st a & s :-> (st, Filterlist.Storage a) & s
 unStorage = forcedCoerce_
 
+-- | Coerce to `Storage`
 toStorage :: (st, Filterlist.Storage a) & s :-> Storage st a & s
 toStorage = forcedCoerce_
 

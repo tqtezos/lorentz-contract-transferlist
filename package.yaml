@@ -1,9 +1,9 @@
 <<: !include "./hpack/module.yaml"
 
 <<: *meta
-name:                lorentz-contract-whitelist
+name:                lorentz-contract-transferlist
 version:             0.4.0.0
-github:              "tqtezos/lorentz-contract-whitelist"
+github:              "tqtezos/lorentz-contract-transferlist"
 license:             BSD3
 author:              "Michael J. Klein TQ Tezos"
 maintainer:          "michael@tqgroup.io"
@@ -12,7 +12,7 @@ copyright:           "2020 Michael J. Klein TQ Tezos"
 extra-source-files:
 - README.md
 
-description:         Please see the README on GitHub at <https://github.com/tqtezos/lorentz-contract-whitelist#readme>
+description:         Please see the README on GitHub at <https://github.com/tqtezos/lorentz-contract-transferlist#readme>
 
 library:
   <<: *lorentz-lib-common
@@ -44,7 +44,7 @@ library:
     - -Wno-unused-do-bind
 
 executables:
-  lorentz-contract-whitelist:
+  lorentz-contract-transferlist:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -54,7 +54,7 @@ executables:
     - -Wno-missing-export-lists
     - -Wno-unused-do-bind
     dependencies:
-    - lorentz-contract-whitelist
+    - lorentz-contract-transferlist
     - optparse-applicative
     - morley
     - lorentz
@@ -65,7 +65,7 @@ executables:
     - ansi-wl-pprint
 
 tests:
-  lorentz-contract-whitelist-test:
+  lorentz-contract-transferlist-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -74,10 +74,11 @@ tests:
     - -with-rtsopts=-N
     - -Wno-missing-export-lists
     dependencies:
-    - base
+    # - base
     - morley
+    - morley-prelude
     - lorentz
-    - lorentz-contract-whitelist
+    - lorentz-contract-transferlist
     - hspec
     - HUnit
     - tasty

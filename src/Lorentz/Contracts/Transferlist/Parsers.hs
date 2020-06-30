@@ -1,6 +1,6 @@
 {-# OPTIONS -Wno-orphans -Wno-missing-export-lists #-}
 
-module Lorentz.Contracts.Whitelist.Parsers where
+module Lorentz.Contracts.Transferlist.Parsers where
 
 import Prelude (FilePath, ($), Natural, error, runReaderT)
 import Data.Char
@@ -109,6 +109,14 @@ parseString name = Opt.strOption $ mconcat
   , Opt.help $ "String representing the contract's initial " <> name <> "."
   ]
 
+-- | Parse a list of `String`'s
+parseStrings :: String -> Opt.Parser [String]
+parseStrings name = Opt.option Opt.auto $ mconcat
+  [ Opt.long name
+  , Opt.metavar "[STRING]"
+  , Opt.help $ "List of String's representing " <> name <> "."
+  ]
+
 -- | Parse a natural number argument, given its field name
 parseNatural :: String -> Opt.Parser Natural
 parseNatural name =
@@ -119,6 +127,15 @@ parseNatural name =
     , Opt.help $ "Natural number representing " <> name <> "."
     ]
 
+-- | Parse a list of natural numbers, given its field name
+parseNaturals :: String -> Opt.Parser [Natural]
+parseNaturals name =
+  Opt.option Opt.auto $
+  mconcat
+    [ Opt.long name
+    , Opt.metavar "[NATURAL]"
+    , Opt.help $ "List of Natural numbers representing " <> name <> "."
+    ]
 
 -- | Parse the output `FilePath`
 outputOptions :: Opt.Parser (Maybe FilePath)
